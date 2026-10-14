@@ -304,8 +304,9 @@ function searchStructuredContent(responseId: string, fetchId: string | null, res
 	return {
 		responseId,
 		fetchId,
-		queries: results.map(({ query, answer, error, provider, providers, results }) => ({
+		queries: results.map(({ query, answer, error, provider, providers, providerErrors, results }) => ({
 			query, answer, error, provider, providers,
+			...(providerErrors?.length ? { providerErrors } : {}),
 			results: results.map(({ title, url, snippet }) => ({ title, url, snippet })),
 		})),
 	};
@@ -444,6 +445,9 @@ function formatFullResults(queryData: QueryResultData): string {
 	if (providers.length > 0) output += `**Provider${providers.length === 1 ? "" : "s"}:** ${providers.join(", ")}\n\n`;
 	if (queryData.answer) {
 		output += `${queryData.answer}\n\n---\n\n`;
+	}
+	if (queryData.providerErrors?.length) {
+		output += `**Provider fallback diagnostics:**\n${queryData.providerErrors.map(failure => `- ${failure.provider}: ${failure.error}`).join("\n")}\n\n`;
 	}
 	for (const r of queryData.results) {
 		output += `### ${r.title}\n${r.url}${r.snippet ? `\n\n${r.snippet}` : ""}\n\n`;
@@ -644,7 +648,7 @@ export function createWebToolCore(host: WebToolCoreHost): WebToolCoreInstance {
 				? `**Provider:** ${providerNames[0]}\n\n`
 				: `**Providers used:** ${providerNames.map((name, index) => `Query ${index + 1}: ${name}`).join("; ")}\n\n`;
 			const duplicateQueries = opts.curated ? duplicateQuerySet(opts.results) : new Set<string>();
-			for (const { query, answer, results, error, provider } of opts.results) {
+			for (const { query, answer, results, error, provider, providerErrors } of opts.results) {
 				if (opts.queryList.length > 1) {
 					output += opts.curated
 						? formatQueryHeader(query, provider, duplicateQueries)
@@ -652,6 +656,9 @@ export function createWebToolCore(host: WebToolCoreHost): WebToolCoreInstance {
 				}
 				if (error) output += `Error: ${error}\n\n`;
 				else output += formatSearchSummary(results, answer) + "\n\n";
+				if (providerErrors?.length) {
+					output += `**Provider fallback diagnostics:**\n${providerErrors.map(failure => `- ${failure.provider}: ${failure.error}`).join("\n")}\n\n`;
+				}
 			}
 		}
 
@@ -778,7 +785,7 @@ export function createWebToolCore(host: WebToolCoreHost): WebToolCoreInstance {
 				});
 
 				try {
-					const { answer, results, inlineContent, provider, providerResponses } = await search(query, {
+					const { answer, results, inlineContent, provider, providerResponses, providerErrors } = await search(query, {
 						provider: resolvedProvider,
 						numResults: params.numResults,
 						recencyFilter,
@@ -790,7 +797,7 @@ export function createWebToolCore(host: WebToolCoreHost): WebToolCoreInstance {
 					});
 
 					const providers = providerResponses?.map(response => response.provider) ?? [provider];
-					return { result: { query, answer, results, error: null, provider, providers } satisfies QueryResultData, inlineContent };
+					return { result: { query, answer, results, error: null, provider, providers, ...(providerErrors?.length ? { providerErrors } : {}) } satisfies QueryResultData, inlineContent };
 				} catch (err) {
 					if (signal?.aborted || isAbortError(err)) throw err;
 					const message = err instanceof Error ? err.message : String(err);
