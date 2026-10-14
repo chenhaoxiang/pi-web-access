@@ -11,13 +11,15 @@ updated: 2026-10-15
 owner: chx
 ---
 
-# Local search routing and diagnostics
+# Search routing and diagnostics
+
+This behavior is now maintained in `chenhaoxiang/pi-web-access`. The [fork maintenance contract](fork-maintenance.md) governs current branches, releases and installation. The local trial and stopped-review paragraphs below are dated history before the user created the remote fork; they are not current fork-release approval.
 
 ## Problem and scope
 
 With keyless Exa MCP, an unrecognized successful HTTP payload previously returned null. Automatic search could then report "No search provider available", while configured routing classified "Exa search returned no results" as unknown and never reached its backup. A valid JSON `results: []` was indistinguishable from that parser failure. The original live incident is not proven to have followed this path; synthetic regression tests reproduce the defect independently.
 
-This local patch is based on upstream v0.40.0, commit `9861ad72a11c9af419b39f9b00860708407f7025`. It reuses the community automatic-empty improvements introduced after the previously installed v0.38.0. There is no public fork, upstream PR, npm publication, or claim of shared Git closure.
+This local patch is based on upstream v0.40.0, commit `9861ad72a11c9af419b39f9b00860708407f7025`. It reuses the community automatic-empty improvements introduced after the previously installed v0.38.0. At the local-trial stage there was no public fork, upstream PR, npm publication or shared Git closure. The user subsequently created the maintained fork; its delivery is recorded separately from this historical trial.
 
 ## Behavior
 
