@@ -15,8 +15,6 @@
     "typecheck": "tsc",
     "audit:runtime": "npm audit --omit=dev --omit=peer",
     "build": "node scripts/build.js",
-    "prepublishOnly": "npm run build && node scripts/pi-extensions-dist.js dist",
-    "postpublish": "node scripts/pi-extensions-dist.js index.ts",
     "release": "node scripts/pack-fork-release.mjs"
   },
   "keywords": [

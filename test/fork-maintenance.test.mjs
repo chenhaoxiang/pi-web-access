@@ -38,6 +38,7 @@ test("release asset packer stages compiled entry and preserves source manifest",
 		const manifest = {
 			name: "pi-web-access", version: "0.40.0-fork.2", private: true,
 			type: "module", files: ["dist", "index.ts"],
+			scripts: { build: "node scripts/build-fixture.mjs" },
 			repository: { type: "git", url: "git+https://github.com/chenhaoxiang/pi-web-access.git" },
 			pi: { extensions: ["./index.ts"] },
 			forkMaintenance: { repository: "chenhaoxiang/pi-web-access", upstreamRepository: "nicobailon/pi-web-access", upstreamVersion: "0.40.0" },
@@ -48,7 +49,8 @@ test("release asset packer stages compiled entry and preserves source manifest",
 		git(source, "remote", "add", "origin", "https://github.com/chenhaoxiang/pi-web-access.git");
 		await writeFile(join(source, ".gitignore"), "dist/\n");
 		await writeFile(join(source, "index.ts"), "export default () => {};\n");
-		git(source, "add", ".gitignore", "index.ts", "scripts/pack-fork-release.mjs");
+		await writeFile(join(source, "scripts/build-fixture.mjs"), `import { mkdirSync, writeFileSync, readFileSync } from "node:fs";\nmkdirSync("dist", { recursive: true });\nwriteFileSync("dist/index.js", readFileSync("index.ts"));\nwriteFileSync("dist/mcp-cli.js", "console.log('fresh build');\\n");\n`);
+		git(source, "add", ".gitignore", "index.ts", "scripts/pack-fork-release.mjs", "scripts/build-fixture.mjs");
 		git(source, "commit", "-m", "synthetic upstream baseline");
 		manifest.forkMaintenance.upstreamCommit = git(source, "rev-parse", "HEAD");
 		await writeFile(join(source, "package.json"), JSON.stringify(manifest, null, 2) + "\n");
@@ -66,6 +68,9 @@ test("release asset packer stages compiled entry and preserves source manifest",
 		assert.equal(provenance.sourceCommit, head);
 		assert.equal(provenance.version, manifest.version);
 		assert.equal(provenance.publishedToNpm, false);
+		const bundled = execFileSync("tar", ["-xOzf", join(out, provenance.packageFilename), "package/dist/mcp-cli.js"], { encoding: "utf8" });
+		assert.equal(bundled, "console.log('fresh build');\n");
+		assert.equal(createHash("sha256").update(bundled).digest("hex"), provenance.bundleSha256["dist/mcp-cli.js"]);
 		const tarball = join(out, provenance.packageFilename);
 		const digest = createHash("sha256").update(await readFile(tarball)).digest("hex");
 		assert.equal(digest, provenance.packageSha256);

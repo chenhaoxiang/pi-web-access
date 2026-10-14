@@ -59,9 +59,14 @@ try {
 } catch {
 	fail(`upstream baseline ${upstreamCommit} is not an ancestor of ${head}`);
 }
+// Build here, not in an earlier manual step: ignored dist/ may belong to another HEAD.
+run("npm", ["run", "build"]);
+if (run("git", ["rev-parse", "HEAD"]) !== head || run("git", ["status", "--porcelain=v1", "--untracked-files=all"])) {
+	fail("Source or HEAD changed during the release build");
+}
 const dist = join(repoRoot, "dist");
 if (!existsSync(join(dist, "index.js")) || !existsSync(join(dist, "mcp-cli.js"))) {
-	fail("dist/index.js and dist/mcp-cli.js are required; run npm run build first");
+	fail("The release build did not produce dist/index.js and dist/mcp-cli.js");
 }
 
 mkdirSync(outDir, { recursive: true });
@@ -73,7 +78,7 @@ try {
 	mkdirSync(join(stage, "package"), { recursive: true });
 	execFileSync("tar", ["-xzf", archive, "-C", join(stage, "package")]);
 	rmSync(archive, { force: true });
-	cpSync(dist, join(stage, "package", "dist"), { recursive: true, errorOnExist: true });
+	cpSync(dist, join(stage, "package", "dist"), { recursive: true, force: false, errorOnExist: true });
 	const stagedManifestPath = join(stage, "package", "package.json");
 	const stagedManifest = JSON.parse(readFileSync(stagedManifestPath, "utf8"));
 	stagedManifest.pi = { ...(stagedManifest.pi ?? {}), extensions: ["./dist"] };
@@ -92,6 +97,7 @@ try {
 		upstreamCommit,
 		packageFilename: basename(tarball),
 		packageSha256: sha256(tarball),
+		bundleSha256: { "dist/index.js": sha256(join(dist, "index.js")), "dist/mcp-cli.js": sha256(join(dist, "mcp-cli.js")) },
 		builtFrom: "compiled dist/ bundle plus tracked source",
 		publishedToNpm: false,
 	};

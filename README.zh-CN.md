@@ -9,7 +9,7 @@
 
 ## 安装
 
-使用固定版本：
+对应 GitHub Release/tag 发布完成后，使用固定版本：
 
 ```bash
 pi install git:github.com/chenhaoxiang/pi-web-access@v0.40.0-fork.1
@@ -32,7 +32,7 @@ pi install git:github.com/chenhaoxiang/pi-web-access@main
 - 区分“搜索成功但没有结果”和“上游响应无法解析”；
 - 配置有序路由时，Exa 无效响应可回退到 AnySearch；
 - 鉴权错误、配置错误和取消操作仍然 fail-closed，不静默切换；
-- 备用渠道成功时，保留前一个渠道的失败原因；
+- 配置式有序路由（`searchRouting`）的备用渠道成功时，保留前一个渠道的失败原因；
 - 诊断同时进入普通输出、结构化结果和已保存的搜索结果。
 
 推荐的本机路由配置：

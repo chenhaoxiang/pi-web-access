@@ -3,7 +3,9 @@
 // wrapper to restore pi.extensions. Direct `npm publish` still relies on
 // postpublish. SIGKILL cannot be handled and may leave the manifest on ./dist.
 //
-// Usage: npm run release [-- <npm publish args>]
+// Historical community publish wrapper, retained for its regression fixtures.
+// Maintained fork releases use scripts/pack-fork-release.mjs and GitHub Releases;
+// the private source package must never be published to the community npm identity.
 import { spawn } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 

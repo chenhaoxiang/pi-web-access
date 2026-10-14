@@ -13,7 +13,7 @@ This is [`chenhaoxiang/pi-web-access`](https://github.com/chenhaoxiang/pi-web-ac
 - Keyless Exa empty searches are distinguished from malformed responses; configured routes try the next provider on an empty result and preserve fallback failures in tool output, structured data and stored retrieval.
 - Suggested local route: Exa → AnySearch. This is opt-in configuration, not a new global default; credentials, browser cookies and hosted-fetch privacy settings are unchanged.
 
-For this fork, use the pinned release:
+Once its matching GitHub Release/tag is published, install this fork at the pinned release:
 
 ```bash
 pi install git:github.com/chenhaoxiang/pi-web-access@v0.40.0-fork.1

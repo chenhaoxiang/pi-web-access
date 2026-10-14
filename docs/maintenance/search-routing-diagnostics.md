@@ -27,7 +27,7 @@ This local patch is based on upstream v0.40.0, commit `9861ad72a11c9af419b39f9b0
 - Eligible fallback categories: transient, quota, network, invalid-response and unsupported. Authentication, credential/config errors and cancellation remain strict.
 - A valid Exa JSON empty array or exact `No results found` text is a successful empty search. Configured routing tries its next provider and keeps the first valid empty response if none has useful content.
 - Unrecognized Exa content is an invalid response, not proof of no matching pages or missing credentials.
-- Successful fallback retains prior failures as optional per-query `providerErrors` in programmatic results, model-visible output and stored search retrieval. The successful query itself keeps `error: null`.
+- Successful fallback in configured ordered routes (`searchRouting`) retains prior failures as optional per-query `providerErrors` in programmatic results, model-visible output and stored search retrieval. The successful query itself keeps `error: null`.
 - A nonempty provider response is not a relevance guarantee. No model-based relevance filter is added, and source URLs/snippets remain available for verification. Known WeChat URLs should be read directly; browser verification challenges are not search-provider failures.
 
 ```json
