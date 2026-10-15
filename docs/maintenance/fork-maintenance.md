@@ -2,6 +2,8 @@
 doc_type: runbook
 project: workspace
 component: pi-web-access
+product_line: shared
+release: 0.41.0-fork.1
 status: active
 truth_mode: maintained
 created: 2026-10-15
@@ -93,7 +95,21 @@ On Node 26.9.0 / npm 11.19.1, with an empty synthetic HOME and external fixture 
 - `npm run typecheck`, `npm run build` and `npm run audit:runtime` passed; the runtime audit reported **0 vulnerabilities** at this verification time.
 - The three updated runtime files and the two community test files match v0.41.0 exactly. Fork search/diagnostic implementation and its test files are unchanged from the prior reviewed main; existing community tests only gain additions, with no removed assertions.
 
-These are source-level, provider-free results. They do not claim the later PR CI, independent review, GitHub Release, installed-package identity, fresh Pi-host loading or live public-network smoke has completed. Consult the exact PR, Release notes and installation receipt for those layers.
+These source-level, provider-free results alone do not prove later review, CI, release or installation. The separate, dated evidence below records the subsequent acceptance layers.
+
+## v0.41.0-fork.1 release and installation acceptance (2026-10-15)
+
+Scope: this maintained fork and the owner's local Pi installation only. Verified through GitHub API/Git reads, freshly downloaded Release assets, archive-to-install byte comparison, the actual Pi host loader and one public search query. This is a dated acceptance record, not a promise about future sessions or provider uptime.
+
+- [PR #2](https://github.com/chenhaoxiang/pi-web-access/pull/2) was regularly merged. Reviewed head: `14386d4a4f0a646f79c8dfe1f34277d3ed57391f`; exact Release source/main merge: `27a3f9a5aad873f2b1a232dd7c474963151d34d5`. Later documentation-only commits do not alter that immutable Release source.
+- [Independent read-only review](https://github.com/chenhaoxiang/pi-web-access/pull/2#issuecomment-6196433058): `codex-local/kimi-k3`, thinking high; blocker 0 / major 0 / minor 1, OK with notes. The sole report-only note is the community User-Agent validator accepting TAB while its message says printable ASCII; CR/LF are rejected, and the exact upstream implementation is retained.
+- [PR CI](https://github.com/chenhaoxiang/pi-web-access/actions/runs/38764052905) and [exact-main CI](https://github.com/chenhaoxiang/pi-web-access/actions/runs/38765225266) both succeeded. The canonical source checkout was safely fast-forwarded and read back; `upstream-main` was fast-forwarded to the exact community v0.41.0 commit.
+- [GitHub Release v0.41.0-fork.1](https://github.com/chenhaoxiang/pi-web-access/releases/tag/v0.41.0-fork.1) contains the compiled tarball, provenance manifest and SHA256SUMS. Tag source was read back as `27a3f9a5aad873f2b1a232dd7c474963151d34d5`. Tarball SHA-256: `835f8b2e4927e6eccd444390232519b49a2f2ab6954569dc60376493b9d6f93d`. All three published assets were downloaded afresh and matched the local release candidate; checksums and bundle hashes passed.
+- The permanent side-by-side installation is `~/.pi/agent/packages/pi-web-access/0.41.0-fork.1`. All **103** archive files matched the installed bytes after runtime-only dependency installation; the effective runtime audit found **0 vulnerabilities** at verification time.
+- Fresh isolated processes loaded the compiled package through the actual Pi **1.2.0-fork.1** host loader with zero loader errors/warnings. Synthetic packaged-code checks passed for Exa HTTP 503 → AnySearch with stored diagnostics, configured User-Agent delivery and invalid User-Agent rejection before any network request.
+- One real, keyless public-query smoke returned **3 results through Exa**. This does not prove long-term relevance/availability or a real outage fallback; the fallback check above is synthetic. No paid model call or real provider credential was needed.
+- Local settings now select the permanent package. Only the matching web-access package declaration changed; unrelated settings and the whole `web-search.json` file stayed byte-identical. The configured Exa → AnySearch route and all credential/privacy opt-ins were preserved. The prior `0.40.0-fork.1`, trial and community installation trees were retained.
+- The owner-local `~/.pi/agent/backups/pi-web-access-upgrade-0.41.0-fork.1-20261015/` contains a mode-0600 settings snapshot, installation receipt, validation evidence and a package-selection-only `rollback.py`. Rollback preserves unrelated settings and does not rewrite the search configuration. No existing active session was restarted or hot-reloaded; only a new/reloaded session is expected to select the new package.
 
 ## Current acceptance boundary
 
