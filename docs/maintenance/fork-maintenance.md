@@ -14,7 +14,7 @@ owner: chx
 
 ## Scope and source
 
-The maintained repository is `chenhaoxiang/pi-web-access`; community source remains `nicobailon/pi-web-access`. The initial fork version is **0.40.0-fork.1**, based on community **v0.40.0**, exact commit `9861ad72a11c9af419b39f9b00860708407f7025`. The package keeps the community license and author attribution. GitHub Release distribution is separate from npm: never publish under the original author's npm identity.
+The maintained repository is `chenhaoxiang/pi-web-access`; community source remains `nicobailon/pi-web-access`. The current fork version is **0.41.0-fork.1**, based on community **v0.41.0**, exact commit `d47dc040552505e3b135d0136a0b15eaf4bdba52`. The initial **0.40.0-fork.1** baseline was community v0.40.0 at `9861ad72a11c9af419b39f9b00860708407f7025`. The package keeps the community license and author attribution. GitHub Release distribution is separate from npm: never publish under the original author's npm identity.
 
 The local trial history is in [search routing diagnostics](search-routing-diagnostics.md). Its 0.40.0-local.1 checks and stopped review are historical evidence, not approval or release evidence for a later fork commit.
 
@@ -26,13 +26,19 @@ The local trial history is in [search routing diagnostics](search-routing-diagno
 - Develop only in the owner-mandated external worktree root, under `<worktree-root>/pi-web-access/<task>`. The canonical source checkout remains on main and receives only verified safe fast-forwards.
 - Each synchronization uses an explicit community tip, diff/semantic review and regression run. Do not use a GitHub one-click fork sync to overwrite our fixes.
 
+## Community v0.41.0 synchronization
+
+This update integrates the exact v0.41.0 tag, not a moving community tip. Community changes add `fetchContent.userAgent` for direct HTTP page fetching and limit the configured SearXNG loopback exemption to its original origin. An invalid User-Agent fails before a request or provider fallback; SearXNG redirects to another loopback address or port remain blocked. No local configuration is automatically changed.
+
+The merge retains our private identity, compiled-release provenance and search reliability changes. Runtime dependencies are unchanged. Community tests add User-Agent and loopback/redirect coverage without removing existing assertions; fork routing and packaging regressions remain intact. Source validation is recorded below; exact-head independent review and CI remain PR evidence, while actual release/download/installation checks are recorded separately in GitHub Release notes and the owner-local receipt. Never infer a published or loaded version from this document alone.
+
 ## Retained fork behavior
 
 1. Exa MCP recognizes valid empty results separately from unparseable payloads. Malformed responses use invalid-response diagnostics instead of claiming no provider or missing credentials.
 2. Configured ordered routes continue on valid empty responses, retain the first empty result if none is useful, and do not hide authentication/cancellation failures.
 3. Successful fallback in configured ordered routes (`searchRouting`) carries prior provider failures through model-visible output, programmatic data and stored retrieval, while the successful query keeps `error: null`. The legacy automatic chain retains its existing final-error behavior. `providerErrors[].error` is human-readable diagnostic text, not a stable machine-parsable classification field; parallel-provider errors retain their pre-existing format.
 4. Exa → AnySearch is the suggested opt-in local route, not a silently changed global provider default. Explicit provider choices remain strict.
-5. Browser-cookie access, SSRF protections, hosted-fetch consent, model routing, API credentials and paid-provider opt-in boundaries are unchanged.
+5. Browser-cookie access, hosted-fetch consent, model routing, API credentials and paid-provider opt-in boundaries are unchanged. The only SSRF adjustment in this synchronization is the community's configured-origin SearXNG loopback allowance described above; ordinary page fetches and cross-origin loopback redirects do not inherit it.
 
 Nonempty results are not automatically relevant. No relevance score or model-based correctness verdict is fabricated. Known URLs should be fetched directly; a WeChat verification page is not evidence that every search provider is broken.
 
@@ -66,7 +72,7 @@ The packer creates local files only; it does not push, publish, install, change 
 After the matching GitHub Release/tag has actually been published, the reproducible source install is:
 
 ```bash
-pi install git:github.com/chenhaoxiang/pi-web-access@v0.40.0-fork.1
+pi install git:github.com/chenhaoxiang/pi-web-access@v0.41.0-fork.1
 ```
 
 `@main` is permitted only when deliberately following our moving integration branch. Never install `upstream-main` or the community npm package when fork behavior is required.
@@ -76,6 +82,18 @@ For a compiled install, prefer the verified GitHub Release tarball. Extract into
 Before selecting a version, preserve the prior package and matching settings/config fingerprints. Compare the current configuration again before updating to avoid concurrent-session overwrites. Rollback restores only the matching package declaration and any changed routing config, not the entire settings snapshot if unrelated values changed.
 
 No active session is force-restarted or hot-reloaded. New sessions load the selected version; settled sessions may reload/restart separately. Distinguish installed selection from runtime evidence. Do not delete old source tips, trial packages, sessions, cache, artifacts or recovery data as part of this task.
+
+## v0.41.0 source validation (2026-10-15)
+
+On Node 26.9.0 / npm 11.19.1, with an empty synthetic HOME and external fixture TMPDIR:
+
+- Pre-merge fork characterization/packaging baseline: **20/20** tests passed.
+- Post-merge routing, Exa, packaging, User-Agent, SearXNG and SSRF/redirect tests: **127/127** passed.
+- Full suite with two workers: **1,263/1,263** passed, with zero skipped or cancelled tests.
+- `npm run typecheck`, `npm run build` and `npm run audit:runtime` passed; the runtime audit reported **0 vulnerabilities** at this verification time.
+- The three updated runtime files and the two community test files match v0.41.0 exactly. Fork search/diagnostic implementation and its test files are unchanged from the prior reviewed main; existing community tests only gain additions, with no removed assertions.
+
+These are source-level, provider-free results. They do not claim the later PR CI, independent review, GitHub Release, installed-package identity, fresh Pi-host loading or live public-network smoke has completed. Consult the exact PR, Release notes and installation receipt for those layers.
 
 ## Current acceptance boundary
 

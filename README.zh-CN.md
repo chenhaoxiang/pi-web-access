@@ -4,15 +4,15 @@
 
 - `main`：我们的整合与发布主线
 - `upstream-main`：社区 `main` 的只读镜像，不是安装来源
-- 当前维护版本：`0.40.0-fork.1`
-- 社区基线：`0.40.0`，提交 `9861ad72a11c9af419b39f9b00860708407f7025`
+- 当前维护版本：`0.41.0-fork.1`
+- 社区基线：`0.41.0`，提交 `d47dc040552505e3b135d0136a0b15eaf4bdba52`
 
 ## 安装
 
 对应 GitHub Release/tag 发布完成后，使用固定版本：
 
 ```bash
-pi install git:github.com/chenhaoxiang/pi-web-access@v0.40.0-fork.1
+pi install git:github.com/chenhaoxiang/pi-web-access@v0.41.0-fork.1
 ```
 
 如需跟随维护主线：
@@ -24,6 +24,12 @@ pi install git:github.com/chenhaoxiang/pi-web-access@main
 生产或可复现环境优先使用 GitHub Release 中的编译包、来源清单和 `SHA256SUMS`。不要安装 `upstream-main`，也不要用社区 npm 包替代维护版。
 
 安装新版本不会替换已经运行的 Pi 进程。让当前任务结束后再 `/reload` 或重启；旧版本应保留到新版本完成验收。
+
+## 社区 0.41.0 更新
+
+- 可在 `web-search.json` 中用 `fetchContent.userAgent` 配置直接 HTTP 抓取的 User-Agent；不配置时保持原默认值，配置无效时在请求或备用抓取前报错。
+- 配置在本机运行的 SearXNG 时，无需将整个回环网段加入全局 SSRF 放行列表；放行仅适用于已配置的 SearXNG 源，重定向到其他本机地址或端口仍会被拦截。
+- 不自动设置 User-Agent、不修改本机搜索路由，也不启用新的外部服务。
 
 ## 搜索路由改进
 
