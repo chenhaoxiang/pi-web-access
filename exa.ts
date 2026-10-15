@@ -265,7 +265,7 @@ export async function callExaMcp(
 	}
 
 	if (!parsed) {
-		throw new Error("Exa MCP returned an empty response");
+		throw new Error("Exa MCP returned no parseable response");
 	}
 
 	if (parsed.error) {
@@ -286,7 +286,7 @@ export async function callExaMcp(
 		?.text;
 
 	if (!text) {
-		throw new Error("Exa MCP returned empty content");
+		throw new Error("Exa MCP returned invalid response: empty content");
 	}
 
 	return text;
@@ -359,7 +359,7 @@ function isAbortMessage(message: string): boolean {
 function parseJsonMcpResults(text: string): ExaSearchResponse["results"] | null {
 	try {
 		const results = (JSON.parse(text) as ExaSearchResponse).results;
-		return Array.isArray(results) && results.length > 0 ? results : null;
+		return Array.isArray(results) ? results : null;
 	} catch {
 		return null;
 	}
@@ -378,15 +378,19 @@ async function searchWithExaMcpTool(
 
 	const jsonResults = parseJsonMcpResults(text);
 	if (jsonResults) {
+		const results = mapResults(jsonResults);
+		if (jsonResults.length > 0 && results.length === 0) throw new Error("Exa MCP returned no parseable results");
 		return toSearchResponse(
 			buildAnswerFromSearchResults(jsonResults),
-			mapResults(jsonResults),
+			results,
 			options.includeContent ? mapInlineContent(jsonResults) : null,
 		);
 	}
 
+	// An explicit empty payload is a successful search, not a transport failure.
+	if (/^No results found[.!]?$/i.test(text.trim())) return { answer: "", results: [] };
 	const textResults = parseMcpResults(text);
-	if (!textResults) return null;
+	if (!textResults) throw new Error("Exa MCP returned no parseable results");
 
 	return toSearchResponse(
 		buildAnswerFromMcpResults(textResults),

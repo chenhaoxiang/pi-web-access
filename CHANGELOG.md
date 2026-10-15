@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- Maintained-fork release metadata and Exa-to-AnySearch search-routing diagnostics are tracked for the `0.40.0-fork.1` release line.
+
+### Fixed
+
+- Distinguish valid empty Exa results from malformed responses and preserve provider fallback diagnostics across search output, structured results and stored retrieval.
+
 ## [0.40.0] - 2026-10-12
 
 ### Highlights

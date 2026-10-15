@@ -447,7 +447,7 @@ async function searchWithResolvedProvider(
 	}
 	const result = await searchWithExa(query, options);
 	if (result) return { ...result, provider };
-	throw new Error("Exa search returned no results.");
+	throw new Error("Exa search returned no parseable results.");
 }
 
 async function isResolvedProviderAvailable(provider: ResolvedSearchProvider, options: FullSearchOptions, useCurrentModel = false): Promise<boolean> {
@@ -626,6 +626,8 @@ async function searchWithConfiguredRouting(
 	routing: SearchRoutingConfig,
 ): Promise<AttributedSearchResponse> {
 	const diagnostics: string[] = [];
+	const providerErrors: ProviderSearchFailure[] = [];
+	let firstEmpty: AttributedSearchResponse | undefined;
 	for (const provider of routing.providers) {
 		const useCurrentModel = provider === "openai" && routing.useCurrentModel === true;
 		if (!(await isResolvedProviderAvailable(provider, options, useCurrentModel))) {
@@ -633,15 +635,23 @@ async function searchWithConfiguredRouting(
 			continue;
 		}
 		try {
-			return await searchWithResolvedProvider(provider, query, options, useCurrentModel);
+			const response = await searchWithResolvedProvider(provider, query, options, useCurrentModel);
+			if (response.results.length || response.answer.trim()) {
+				return { ...response, ...(providerErrors.length ? { providerErrors } : {}) };
+			}
+			firstEmpty ??= response;
+			diagnostics.push(`${provider}: empty results`);
 		} catch (err) {
 			const classified = classifyProviderError(provider, err);
-			diagnostics.push(`${provider} [${classified.kind}]: ${errorMessage(err)}`);
+			const error = `[${classified.kind}]: ${errorMessage(err)}`;
+			diagnostics.push(`${provider} ${error}`);
+			providerErrors.push({ provider, error });
 			if (!routing.fallbackOn.includes(classified.kind as SearchRoutingConfig["fallbackOn"][number])) {
 				throw classified;
 			}
 		}
 	}
+	if (firstEmpty) return { ...firstEmpty, ...(providerErrors.length ? { providerErrors } : {}) };
 	throw new Error(`Configured search routing exhausted:\n  - ${diagnostics.join("\n  - ")}`);
 }
 

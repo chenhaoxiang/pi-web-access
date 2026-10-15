@@ -2,7 +2,26 @@
   <img src="banner.png" alt="pi-web-access" width="1100">
 </p>
 
-# Pi Web Access
+# Pi Web Access — maintained fork
+
+English | [简体中文](README.zh-CN.md)
+
+This is [`chenhaoxiang/pi-web-access`](https://github.com/chenhaoxiang/pi-web-access), the maintained fork of [`nicobailon/pi-web-access`](https://github.com/nicobailon/pi-web-access). Version **0.40.0-fork.1** is based on community v0.40.0 at `9861ad72a11c9af419b39f9b00860708407f7025` and retains the search-routing reliability fixes described below.
+
+- `main` is our reviewed integration and release branch; `upstream-main` mirrors only community main and is never an installation source.
+- Fork releases use immutable `v<version>-fork.<revision>` tags, installable GitHub Release tarballs, provenance and SHA-256 checksums. No community npm identity is published.
+- Keyless Exa empty searches are distinguished from malformed responses; configured routes try the next provider on an empty result and preserve fallback failures in tool output, structured data and stored retrieval.
+- Suggested local route: Exa → AnySearch. This is opt-in configuration, not a new global default; credentials, browser cookies and hosted-fetch privacy settings are unchanged.
+
+Once its matching GitHub Release/tag is published, install this fork at the pinned release:
+
+```bash
+pi install git:github.com/chenhaoxiang/pi-web-access@v0.40.0-fork.1
+```
+
+Use `@main` only when deliberately following our moving maintenance branch. For a checksum-verified compiled install, download the tarball, `release-manifest.json` and `SHA256SUMS` from [our releases](https://github.com/chenhaoxiang/pi-web-access/releases), verify them, install into a permanent versioned directory without peer replacement, and select that package. Keep the old installation and let active sessions finish before reload/restart. See [fork maintenance](docs/maintenance/fork-maintenance.md).
+
+The provider reference below is retained from the community project. Its npm installation commands refer to the community distribution, not this fork.
 
 **Web search, content extraction, and video understanding for Pi agent. OpenAI/Codex search, zero-config Exa search, Brave, Parallel, TinyFish, Search1API, Searchinfinity, Querit, Tavily, Firecrawl, Jina, SERPdive, Kagi, Bocha, Ollama, AnySearch, XCrawl, Valyu, xAI/Grok, Mistral, Bright Data SERP, SerpBase, SerpApi, Serper, explicit-only Serply, self-hosted SearXNG, degoog metasearch, self-hosted Crawl4AI extraction, keyless DuckDuckGo, keyless Keenable, optional browser-cookie Gemini Web, Kimi Code Plan search, or bring your own API keys.**
 

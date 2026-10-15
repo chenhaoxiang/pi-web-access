@@ -26,6 +26,7 @@ export type WebSearchStructuredContent = {
 		error: string | null;
 		provider?: string;
 		providers?: string[];
+		providerErrors?: Array<{ provider: string; error: string }>;
 		results: Array<{ title: string; url: string; snippet: string }>;
 	}>;
 };

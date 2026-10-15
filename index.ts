@@ -135,6 +135,7 @@ const webSearchOutputSchema = Type.Object({
 		error: nullableString("Why this query failed, null on success"),
 		provider: Type.Optional(Type.String()),
 		providers: Type.Optional(Type.Array(Type.String())),
+		providerErrors: Type.Optional(Type.Array(Type.Object({ provider: Type.String(), error: Type.String() }))),
 		results: Type.Array(Type.Object({ title: Type.String(), url: Type.String(), snippet: Type.String() })),
 	})),
 });
