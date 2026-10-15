@@ -1,6 +1,6 @@
 {
   "name": "pi-web-access",
-  "version": "0.40.0-fork.1",
+  "version": "0.41.0-fork.1",
   "private": true,
   "description": "Web search, URL fetching, GitHub repo cloning, PDF extraction, YouTube video understanding, and local video analysis for Pi coding agent. Supports OpenAI, Brave, Parallel, TinyFish, Search1API, Searchinfinity, Querit, Tavily, Firecrawl, Crawl4AI, Jina, SERPdive, Kagi, Ollama, AnySearch, Bright Data SERP, SerpBase, SerpApi, Serply, You.com, SearXNG, degoog, Exa, Perplexity, Gemini, Kimi, and Mistral.",
   "type": "module",
@@ -45,8 +45,8 @@
   "forkMaintenance": {
     "repository": "chenhaoxiang/pi-web-access",
     "upstreamRepository": "nicobailon/pi-web-access",
-    "upstreamVersion": "0.40.0",
-    "upstreamCommit": "9861ad72a11c9af419b39f9b00860708407f7025"
+    "upstreamVersion": "0.41.0",
+    "upstreamCommit": "d47dc040552505e3b135d0136a0b15eaf4bdba52"
   },
   "files": [
     "dist",

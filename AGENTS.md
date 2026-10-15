@@ -13,7 +13,7 @@ This repository is `chenhaoxiang/pi-web-access`; `nicobailon/pi-web-access` rema
 
 ## Documentation map
 
-- [Fork maintenance and installation](docs/maintenance/fork-maintenance.md): current baseline, branch/CI/release and rollback contracts.
+- [Fork maintenance and installation](docs/maintenance/fork-maintenance.md): v0.41.0 synchronization baseline, retained fork behavior, validation and branch/CI/release/rollback contracts.
 - [Search routing diagnostics](docs/maintenance/search-routing-diagnostics.md): runtime behavior, test coverage and the local trial history before the fork was created.
 - [Simplified Chinese README](README.zh-CN.md): fork installation, capabilities, configuration and validation in Chinese.
 
