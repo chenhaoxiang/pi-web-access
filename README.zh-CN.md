@@ -4,15 +4,15 @@
 
 - `main`：我们的整合与发布主线
 - `upstream-main`：社区 `main` 的只读镜像，不是安装来源
-- 当前维护版本：`0.41.0-fork.1`
-- 社区基线：`0.41.0`，提交 `d47dc040552505e3b135d0136a0b15eaf4bdba52`
+- 当前维护版本：`0.42.0-fork.1`
+- 社区基线：`0.42.0`，提交 `18e36f9e0fc2de3c9895a7fda8d39a62ce60f49e`
 
 ## 安装
 
 对应 GitHub Release/tag 发布完成后，使用固定版本：
 
 ```bash
-pi install git:github.com/chenhaoxiang/pi-web-access@v0.41.0-fork.1
+pi install git:github.com/chenhaoxiang/pi-web-access@v0.42.0-fork.1
 ```
 
 如需跟随维护主线：
@@ -25,11 +25,13 @@ pi install git:github.com/chenhaoxiang/pi-web-access@main
 
 安装新版本不会替换已经运行的 Pi 进程。让当前任务结束后再 `/reload` 或重启；旧版本应保留到新版本完成验收。
 
-## 社区 0.41.0 更新
+## 社区 0.42.0 更新
 
-- 可在 `web-search.json` 中用 `fetchContent.userAgent` 配置直接 HTTP 抓取的 User-Agent；不配置时保持原默认值，配置无效时在请求或备用抓取前报错。
-- 配置在本机运行的 SearXNG 时，无需将整个回环网段加入全局 SSRF 放行列表；放行仅适用于已配置的 SearXNG 源，重定向到其他本机地址或端口仍会被拦截。
-- 不自动设置 User-Agent、不修改本机搜索路由，也不启用新的外部服务。
+- 新增 DeepSeek 搜索渠道，按成功请求计费，必须显式选择或加入路由；`auto` 和 `all` 不会自动使用。
+- 页面问答和搜索摘要通过 `streamSimple` 调用虚拟模型，避免绕过宿主路由。
+- 可用 `toolExposure: "deferred"` 按需暴露大型 Web 工具；默认仍直接提供，不自动修改本机设置。
+- Windows 的 `!command` 凭据来源支持 Git Bash；Gemini ADC 在显式配置后支持 GCE 机器服务账号。
+- 继续保留直接抓取 User-Agent 校验、SearXNG 同源回环限制和 fork 搜索诊断；不自动变更凭据、搜索路由、浏览器或付费服务授权。
 
 ## 搜索路由改进
 

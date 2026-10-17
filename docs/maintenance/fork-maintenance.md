@@ -3,7 +3,7 @@ doc_type: runbook
 project: workspace
 component: pi-web-access
 product_line: shared
-release: 0.41.0-fork.1
+release: 0.42.0-fork.1
 status: active
 truth_mode: maintained
 created: 2026-10-15
@@ -16,7 +16,7 @@ owner: chx
 
 ## Scope and source
 
-The maintained repository is `chenhaoxiang/pi-web-access`; community source remains `nicobailon/pi-web-access`. The current fork version is **0.41.0-fork.1**, based on community **v0.41.0**, exact commit `d47dc040552505e3b135d0136a0b15eaf4bdba52`. The initial **0.40.0-fork.1** baseline was community v0.40.0 at `9861ad72a11c9af419b39f9b00860708407f7025`. The package keeps the community license and author attribution. GitHub Release distribution is separate from npm: never publish under the original author's npm identity.
+The maintained repository is `chenhaoxiang/pi-web-access`; community source remains `nicobailon/pi-web-access`. The current fork version is **0.42.0-fork.1**, based on community **v0.42.0**, exact commit `18e36f9e0fc2de3c9895a7fda8d39a62ce60f49e`. The initial **0.40.0-fork.1** baseline was community v0.40.0 at `9861ad72a11c9af419b39f9b00860708407f7025`. The package keeps the community license and author attribution. GitHub Release distribution is separate from npm: never publish under the original author's npm identity.
 
 The local trial history is in [search routing diagnostics](search-routing-diagnostics.md). Its 0.40.0-local.1 checks and stopped review are historical evidence, not approval or release evidence for a later fork commit.
 
@@ -28,7 +28,11 @@ The local trial history is in [search routing diagnostics](search-routing-diagno
 - Develop only in the owner-mandated external worktree root, under `<worktree-root>/pi-web-access/<task>`. The canonical source checkout remains on main and receives only verified safe fast-forwards.
 - Each synchronization uses an explicit community tip, diff/semantic review and regression run. Do not use a GitHub one-click fork sync to overwrite our fixes.
 
-## Community v0.41.0 synchronization
+## Community v0.42.0 synchronization
+
+The current synchronization integrates explicit-only DeepSeek search, virtual-model routing for nested answers and summaries, opt-in deferred exposure for large web tools, Windows Git Bash credential commands and GCE metadata ADC. It retains the fork's Exa/AnySearch diagnostic routing and does not enable paid DeepSeek, deferred tool exposure or new credentials by default. Source and validation evidence is recorded in [the 0.42.0 report](2026-10-17-community-0.42.0.md).
+
+## Historical community v0.41.0 synchronization
 
 This update integrates the exact v0.41.0 tag, not a moving community tip. Community changes add `fetchContent.userAgent` for direct HTTP page fetching and limit the configured SearXNG loopback exemption to its original origin. An invalid User-Agent fails before a request or provider fallback; SearXNG redirects to another loopback address or port remain blocked. No local configuration is automatically changed.
 
@@ -74,7 +78,7 @@ The packer creates local files only; it does not push, publish, install, change 
 After the matching GitHub Release/tag has actually been published, the reproducible source install is:
 
 ```bash
-pi install git:github.com/chenhaoxiang/pi-web-access@v0.41.0-fork.1
+pi install git:github.com/chenhaoxiang/pi-web-access@v0.42.0-fork.1
 ```
 
 `@main` is permitted only when deliberately following our moving integration branch. Never install `upstream-main` or the community npm package when fork behavior is required.

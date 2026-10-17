@@ -71,6 +71,7 @@ import { isSerperAvailable } from "./serper.ts";
 import { isSerplyAvailable } from "./serply.ts";
 import { isKeenableAvailable } from "./keenable.ts";
 import { isCeramicAvailable } from "./ceramic.ts";
+import { isDeepSeekAvailable } from "./deepseek.ts";
 import { isBaizhiAvailable } from "./baizhi.ts";
 import { isZaiAvailable } from "./zai.ts";
 import { isValyuAvailable } from "./valyu.ts";
@@ -346,6 +347,7 @@ async function getProviderAvailability(ctx: ExtensionContext): Promise<ProviderA
 		valyu: allowedProviders.has("valyu") && isValyuAvailable(),
 		keenable: allowedProviders.has("keenable") && isKeenableAvailable(),
 		ceramic: allowedProviders.has("ceramic") && isCeramicAvailable(),
+		deepseek: allowedProviders.has("deepseek") && isDeepSeekAvailable(),
 	};
 	return {
 		all: ALL_SEARCH_PROVIDERS.some(provider => provider === "gemini" ? geminiApiAvail : providers[provider]),
@@ -725,6 +727,13 @@ export default function (pi: ExtensionAPI) {
 	const toolActivation = initConfig.toolActivation ?? "auto";
 	if (toolActivation !== "auto" && toolActivation !== "dynamic" && toolActivation !== "eager") {
 		throw new Error(`toolActivation in ${WEB_SEARCH_CONFIG_PATH} must be "auto", "dynamic", or "eager"`);
+	}
+	const toolExposure = initConfig.toolExposure ?? "direct";
+	if (toolExposure !== "direct" && toolExposure !== "deferred") {
+		throw new Error(`toolExposure in ${WEB_SEARCH_CONFIG_PATH} must be "direct" or "deferred"`);
+	}
+	if (toolExposure === "deferred" && toolActivation === "eager") {
+		throw new Error(`toolExposure "deferred" in ${WEB_SEARCH_CONFIG_PATH} cannot be combined with toolActivation "eager"`);
 	}
 	const allowedSearchProviders = initConfig.webSearch?.allowedProviders === undefined ? RESOLVED_SEARCH_PROVIDERS : getAllowedSearchProviders();
 	const allEligibleProviders = allowedSearchProviders.filter(provider => ALL_SEARCH_PROVIDERS.includes(provider));
@@ -1432,6 +1441,7 @@ export default function (pi: ExtensionAPI) {
 			})),
 		}),
 		outputSchema: webSearchOutputSchema,
+		exposure: toolExposure,
 
 		async execute(callId, params, signal, onUpdate, ctx) {
 			// Nested calls neither open the curator unless asked nor fetch content in the background.
@@ -1965,6 +1975,7 @@ export default function (pi: ExtensionAPI) {
 				description: "http(s) or socks proxy URL (e.g. http://host:port or socks5h://host:port) used for every outbound request in this call (search APIs and result-page fetches). Empty string forces direct access.",
 			})),
 		}),
+		exposure: toolExposure,
 		async execute(_callId, params, signal, _onUpdate, ctx) {
 			return markToolError(await core.sourceCheck(params, signal, { extensionContext: ctx }));
 		},
@@ -2017,6 +2028,7 @@ export default function (pi: ExtensionAPI) {
 			})),
 		}),
 		outputSchema: fetchContentOutputSchema,
+		exposure: toolExposure,
 
 		async execute(_toolCallId, params, signal, onUpdate, ctx): Promise<AgentToolResult<Record<string, unknown>>> {
 			return markToolError(await core.fetchContent(params, signal, { extensionContext: ctx, onUpdate }));
@@ -2181,6 +2193,7 @@ export default function (pi: ExtensionAPI) {
 			], { description: "Text or texts to find in the selected stored content. When supplied, offset and limit are ignored." })),
 			findMode: Type.Optional(StringEnum(["exact", "case-insensitive", "fuzzy"], { description: "Matching mode for findText (default: case-insensitive). Requires findText." })),
 		}),
+		exposure: toolExposure,
 
 		async execute(_toolCallId, rawParams): Promise<AgentToolResult<Record<string, unknown>>> {
 			return markToolError(await core.getSearchContent(rawParams));
@@ -2260,12 +2273,14 @@ export default function (pi: ExtensionAPI) {
 	});
 	}
 
+	// Deferred tools are never declared on registration, so web_enable must stay the model's route
+	// to them: auto's eager path would leave a session with neither the tools nor the loader.
 	if (toolActivation !== "eager") registerWebToolActivation(pi, [
 		...(webSearchEnabled ? [{ name: toolNames.webSearch, capability: "search" as const }] : []),
 		...(sourceCheckEnabled ? [{ name: toolNames.sourceCheck, capability: "source-check" as const }] : []),
 		...(fetchContentEnabled ? [{ name: toolNames.fetchContent, capability: "fetch" as const }] : []),
 		...(getSearchContentEnabled ? [{ name: toolNames.getSearchContent, capability: "stored-content" as const }] : []),
-	], toolActivation);
+	], toolExposure === "deferred" ? "dynamic" : toolActivation);
 
 	if (isCommandEnabled(initConfig, "websearch")) pi.registerCommand("websearch", {
 		description: "Open web search curator",
