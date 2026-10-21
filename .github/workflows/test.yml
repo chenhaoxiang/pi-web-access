@@ -22,7 +22,7 @@ jobs:
         with:
           node-version: '24'
           cache: npm
-      - run: npm ci
+      - run: npm ci --ignore-scripts
       - run: npm run typecheck
       - run: npm test -- --test-concurrency=2
       - run: npm run build
