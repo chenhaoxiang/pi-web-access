@@ -4,6 +4,48 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.44.0-fork.1] - 2026-10-21
+
+- Integrate community main d0e323ac (0.44.0 source; latest upstream Release was 0.43.0), retaining ordered fallback diagnostics and explicit paid-provider/hosted-fetch boundaries. Update Hono to 4.13.13 for GHSA-5r4p-p66f-jhc7.
+
+## [0.44.0] - 2026-10-20
+
+### Highlights
+
+- Send most search providers through your own API gateway or proxy, using a config key or an environment variable per provider.
+- API keys are removed when a provider redirects a request to a different site.
+- If you use Pi's `codemode` or `tool_search`, the web tools can now add nothing to your context until a script actually calls one.
+
+### Added
+
+- Gateway support for Parallel, Serper, SerpApi, Perplexity, DeepSeek, Ollama, Jina search, Mistral, and the other providers listed in the README's gateway table. Set `<provider>BaseUrl` in config, or the matching environment variable, which wins over config. Ollama and DeepSeek read `PI_OLLAMA_BASE_URL` and `PI_DEEPSEEK_BASE_URL`, because the plain names are often already set for a local Ollama server or other DeepSeek clients. Any path prefix on your gateway URL is kept, and the official endpoints stay the default. When a provider redirects to a different site, API key headers and the `api_key` query parameter are dropped. Thanks to [@XWIlluDelu](https://github.com/XWIlluDelu) for [PR #590](https://github.com/nicobailon/pi-web-access/pull/590).
+- `"toolActivation": "none"` removes the `web_enable` loader, so the web tools are reached only from Pi `codemode` scripts or `tool_search` and add no tool definitions until a script calls one. It only works with `"toolExposure": "deferred"`, and it needs `codemode` or `tool_search` turned on in Pi. The other `toolActivation` values work as before. Thanks to [@johnhenaot](https://github.com/johnhenaot) for [PR #591](https://github.com/nicobailon/pi-web-access/pull/591).
+
+### Changed
+
+- Jina search rejects the queries `.` and `..`, which would otherwise escape a gateway's path. Provider API calls follow at most 5 redirects.
+
+## [0.43.0] - 2026-10-20
+
+### Highlights
+
+- Search with Linkup: a new provider that runs only when you pick it, since each search uses account credits.
+- DeepSeek search can return the full text of the pages it found, and DeepSeek Fetch can read pages for `fetch_content` when you opt in.
+- xAI search can go through your own Responses gateway, with a longer timeout for slow X searches.
+- A default provider list now falls back to your `searchRouting` providers when every provider in it fails.
+- Short, complete pages no longer come back from `fetch_content` marked "incomplete".
+
+### Added
+
+- Linkup search provider. Set `linkupApiKey` or `LINKUP_API_KEY` and select `provider: "linkup"`. `linkupDepth` picks `flash`, `fast` (default), `standard`, or `deep`. Result limits, domain and recency filters, and inline page text all work. Linkup is never chosen by `auto` or `all`, because searches use account credits. Thanks to [@kestermcullough](https://github.com/kestermcullough) for [PR #584](https://github.com/nicobailon/pi-web-access/pull/584).
+- DeepSeek search with `includeContent` now returns the page text DeepSeek already fetched, so those pages aren't fetched a second time. DeepSeek Fetch is a new opt-in `fetch_content` provider that returns pages as Markdown: add `deepseek` to `fetchRouting.providers` and set `fetchRouting.allowRemoteHostedProviders` to `true`. It uses the same `deepseekApiKey` / `DEEPSEEK_API_KEY` as search. Thanks to [@Jerry2003sky](https://github.com/Jerry2003sky) for [issue #582](https://github.com/nicobailon/pi-web-access/issues/582) and [@Ebotian](https://github.com/Ebotian) for [PR #585](https://github.com/nicobailon/pi-web-access/pull/585).
+- `xaiResponsesUrl` sends xAI search to another Responses endpoint, such as a gateway that relays `x_search` to a Grok subscription. Only `xaiApiKey` or `XAI_API_KEY` is sent there, never Pi's xAI sign-in. `xaiSearchTimeoutMs` raises the 60-second xAI timeout, up to 10 minutes, for `x_search` questions that take longer. Thanks to [@zane668](https://github.com/zane668) for [issue #583](https://github.com/nicobailon/pi-web-access/issues/583).
+
+### Fixed
+
+- A default `provider` list such as `["exa", "brave"]` now falls back to `searchRouting` when every provider in it fails. Before, setting `provider` switched routing off, so the search just errored. Fallback happens only when each failure is one of your `fallbackOn` types, and it skips providers the list already tried. This covers tool calls, the curator, and `/websearch`; a list passed in a single tool call still doesn't fall back. Thanks to [@isjiajia01](https://github.com/isjiajia01) for [issue #580](https://github.com/nicobailon/pi-web-access/issues/580).
+- `fetch_content` in readable mode returns a complete short page instead of calling it incomplete. A static page with under 500 characters of visible text is accepted once something is extracted from it. Pages that run scripts still try other providers, because their short text may be a loading placeholder. When a page still looks incomplete, the error says how much text was extracted and how much the page shows. Thanks to [@donnielrt](https://github.com/donnielrt) for [issue #581](https://github.com/nicobailon/pi-web-access/issues/581).
+
 ## [0.42.0-fork.1] - 2026-10-17
 
 - Integrate community v0.42.0 with DeepSeek, virtual-model, deferred-exposure, Windows credential and GCE ADC updates.
@@ -82,6 +124,7 @@ All notable changes to this project will be documented in this file.
 - `fetch_content` answer mode now answers from a YouTube or local-video transcript that comes with a thumbnail, instead of failing with "Page answer requires textual fetched content". Requests for several video frames are refused in answer mode instead of being answered from a placeholder line. Thanks to [@goodman-b](https://github.com/goodman-b) for [PR #562](https://github.com/nicobailon/pi-web-access/pull/562).
 - `get_search_content` `findText` excerpts no longer end in half an emoji. A character split at the excerpt edge shows as `�`, so the text stays valid. Thanks to [@yazanabuashour](https://github.com/yazanabuashour) for [PR #563](https://github.com/nicobailon/pi-web-access/pull/563).
 - Reading stored content page by page with `fetch_content` and `get_search_content` no longer splits an emoji across two pages. The whole character starts the next page, and the next-page offset points to it ([#564](https://github.com/nicobailon/pi-web-access/issues/564)).
+
 ## [0.39.0] - 2026-10-11
 
 ### Highlights

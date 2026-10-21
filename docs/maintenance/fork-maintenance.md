@@ -3,7 +3,7 @@ doc_type: runbook
 project: workspace
 component: pi-web-access
 product_line: shared
-release: 0.42.0-fork.1
+release: 0.44.0-fork.1
 status: active
 truth_mode: maintained
 created: 2026-10-15
@@ -16,7 +16,7 @@ owner: chx
 
 ## Scope and source
 
-The maintained repository is `chenhaoxiang/pi-web-access`; community source remains `nicobailon/pi-web-access`. The current fork version is **0.42.0-fork.1**, based on community **v0.42.0**, exact commit `18e36f9e0fc2de3c9895a7fda8d39a62ce60f49e`. The initial **0.40.0-fork.1** baseline was community v0.40.0 at `9861ad72a11c9af419b39f9b00860708407f7025`. The package keeps the community license and author attribution. GitHub Release distribution is separate from npm: never publish under the original author's npm identity.
+The maintained repository is `chenhaoxiang/pi-web-access`; community source remains `nicobailon/pi-web-access`. The current source candidate is **0.44.0-fork.1**, based on community main version **0.44.0**, exact commit `d0e323ac935e8753d11e1853b81c057e39dee4dc`; the latest upstream GitHub Release was v0.43.0 when selected. Previous **0.42.0-fork.1** remains available for rollback. The initial **0.40.0-fork.1** baseline was community v0.40.0 at `9861ad72a11c9af419b39f9b00860708407f7025`. The package keeps the community license and author attribution. GitHub Release distribution is separate from npm: never publish under the original author's npm identity.
 
 The local trial history is in [search routing diagnostics](search-routing-diagnostics.md). Its 0.40.0-local.1 checks and stopped review are historical evidence, not approval or release evidence for a later fork commit.
 
@@ -28,9 +28,13 @@ The local trial history is in [search routing diagnostics](search-routing-diagno
 - Develop only in the owner-mandated external worktree root, under `<worktree-root>/pi-web-access/<task>`. The canonical source checkout remains on main and receives only verified safe fast-forwards.
 - Each synchronization uses an explicit community tip, diff/semantic review and regression run. Do not use a GitHub one-click fork sync to overwrite our fixes.
 
-## Community v0.42.0 synchronization
+## Community main 0.44.0 synchronization
 
-The current synchronization integrates explicit-only DeepSeek search, virtual-model routing for nested answers and summaries, opt-in deferred exposure for large web tools, Windows Git Bash credential commands and GCE metadata ADC. It retains the fork's Exa/AnySearch diagnostic routing and does not enable paid DeepSeek, deferred tool exposure or new credentials by default. Source and validation evidence is recorded in [the 0.42.0 report](2026-10-17-community-0.42.0.md).
+The current synchronization adds gateway/credential-redirect safety, explicit-only Linkup, opt-in DeepSeek fetch, xAI endpoint/timeout, configured-array fallback and short-page support. Hono is locked to 4.13.13 to resolve GHSA-5r4p-p66f-jhc7. Retained diagnostics and validation are in [the current report](2026-10-21-community-sync.md); package/release/install are separately verified.
+
+## Historical community v0.42.0 synchronization
+
+That synchronization integrates explicit-only DeepSeek search, virtual-model routing for nested answers and summaries, opt-in deferred exposure for large web tools, Windows Git Bash credential commands and GCE metadata ADC. It retains the fork's Exa/AnySearch diagnostic routing and does not enable paid DeepSeek, deferred tool exposure or new credentials by default. Source and validation evidence is recorded in [the 0.42.0 report](2026-10-17-community-0.42.0.md).
 
 ## Historical community v0.41.0 synchronization
 
@@ -44,7 +48,7 @@ The merge retains our private identity, compiled-release provenance and search r
 2. Configured ordered routes continue on valid empty responses, retain the first empty result if none is useful, and do not hide authentication/cancellation failures.
 3. Successful fallback in configured ordered routes (`searchRouting`) carries prior provider failures through model-visible output, programmatic data and stored retrieval, while the successful query keeps `error: null`. The legacy automatic chain retains its existing final-error behavior. `providerErrors[].error` is human-readable diagnostic text, not a stable machine-parsable classification field; parallel-provider errors retain their pre-existing format.
 4. Exa → AnySearch is the suggested opt-in local route, not a silently changed global provider default. Explicit provider choices remain strict.
-5. Browser-cookie access, hosted-fetch consent, model routing, API credentials and paid-provider opt-in boundaries are unchanged. The only SSRF adjustment in this synchronization is the community's configured-origin SearXNG loopback allowance described above; ordinary page fetches and cross-origin loopback redirects do not inherit it.
+5. Browser-cookie access, hosted-fetch consent, model routing, API credentials and paid-provider opt-in boundaries are unchanged. The historical v0.41.0 SSRF adjustment is the configured-origin SearXNG loopback allowance described above; ordinary page fetches and cross-origin loopback redirects do not inherit it.
 
 Nonempty results are not automatically relevant. No relevance score or model-based correctness verdict is fabricated. Known URLs should be fetched directly; a WeChat verification page is not evidence that every search provider is broken.
 
@@ -78,7 +82,7 @@ The packer creates local files only; it does not push, publish, install, change 
 After the matching GitHub Release/tag has actually been published, the reproducible source install is:
 
 ```bash
-pi install git:github.com/chenhaoxiang/pi-web-access@v0.42.0-fork.1
+pi install git:github.com/chenhaoxiang/pi-web-access@v0.44.0-fork.1
 ```
 
 `@main` is permitted only when deliberately following our moving integration branch. Never install `upstream-main` or the community npm package when fork behavior is required.

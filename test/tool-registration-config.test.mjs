@@ -75,8 +75,8 @@ test("malformed config falls back during extension registration", () => {
 
 test("default public execution tool definitions retain their compatibility hashes", () => {
 	const expected = {
-		web_search: "eeb03b1eaa46fc8218d23888bc30d14e19eba11fc76d7e0bb4cced3cd7ec34f6",
-		source_check: "597718ee1af457a65ae2cf804a35de87b774b13edfba834fd9e1efb8305ff172",
+		web_search: "e6ebcc35a67b6310c5cf5313ff9057e4b10b3f36553d0203514f9e1354c172c3",
+		source_check: "39c08349c54eef4284f393c3324dfd79f7af86803d3f9a75482ef8e1826a5c9f",
 		fetch_content: "cdf7a6b6e612edce16c3cf4b0fb5377c3b05c3855814363ffd8501e16775047c",
 		get_search_content: "e1c7597fc085a811c0c6fcde365a96571c275c70b93a48206a38be06a7a45a5f",
 	};
@@ -183,7 +183,8 @@ test("tool names can be configured without changing defaults", () => {
 test("tool config rejects invalid, duplicate, or reserved names and invalid activation or exposure", () => {
 	assert.match(registrationError({ toolNames: { webSearch: "1bad" } }), /toolNames\.webSearch/);
 	assert.match(registrationError({ toolNames: { webSearch: "same_name", fetchContent: "same_name" } }), /duplicates/);
-	assert.match(registrationError({ toolActivation: "lazy" }), /toolActivation.*"auto", "dynamic", or "eager"/);
+	assert.match(registrationError({ toolActivation: "lazy" }), /toolActivation.*"auto", "dynamic", "eager", or "none"/);
+	assert.match(registrationError({ toolActivation: "none" }), /toolActivation "none".*requires toolExposure "deferred"/);
 	assert.match(registrationError({ toolExposure: "hidden" }), /toolExposure.*"direct" or "deferred"/);
 	assert.match(registrationError({ toolExposure: "deferred", toolActivation: "eager" }), /toolExposure "deferred".*toolActivation "eager"/);
 	assert.match(registrationError({ toolNames: { webSearch: "web_enable" } }), /web_enable.*reserved/i);
