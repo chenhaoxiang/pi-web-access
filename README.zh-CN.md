@@ -4,15 +4,15 @@
 
 - `main`：我们的整合与发布主线
 - `upstream-main`：社区 `main` 的只读镜像，不是安装来源
-- 当前维护版本：`0.42.0-fork.1`
-- 社区基线：`0.42.0`，提交 `18e36f9e0fc2de3c9895a7fda8d39a62ce60f49e`
+- 当前维护版本：`0.44.0-fork.1`
+- 社区基线：社区 main 中的 `0.44.0`，提交 `d0e323ac935e8753d11e1853b81c057e39dee4dc`（选定时最新社区 GitHub Release 为 `0.43.0`）
 
 ## 安装
 
 对应 GitHub Release/tag 发布完成后，使用固定版本：
 
 ```bash
-pi install git:github.com/chenhaoxiang/pi-web-access@v0.42.0-fork.1
+pi install git:github.com/chenhaoxiang/pi-web-access@v0.44.0-fork.1
 ```
 
 如需跟随维护主线：
@@ -25,7 +25,16 @@ pi install git:github.com/chenhaoxiang/pi-web-access@main
 
 安装新版本不会替换已经运行的 Pi 进程。让当前任务结束后再 `/reload` 或重启；旧版本应保留到新版本完成验收。
 
-## 社区 0.42.0 更新
+## 社区 0.43 / 0.44 更新
+
+- 多个搜索渠道支持网关前缀；跨源重定向移除 API 凭据，默认官方地址不变。
+- 新增显式选择的付费 Linkup 搜索；DeepSeek Fetch 仍需单独允许远程托管抓取。
+- 默认 provider 数组全部失败时，可按已有策略进入 searchRouting；单次显式 provider 选择仍严格执行。
+- 静态完整短页面可直接返回；xAI 支持单独的 Responses 地址与搜索超时。
+- `toolExposure: "deferred"` 可配合 `toolActivation: "none"`，仅通过 codemode / tool_search 发现工具，不自动改配置。
+- 更新 Hono 锁定版本，修复运行时依赖审计发现的静态路径重复解码漏洞。
+
+### 保留的社区 0.42.0 能力
 
 - 新增 DeepSeek 搜索渠道，按成功请求计费，必须显式选择或加入路由；`auto` 和 `all` 不会自动使用。
 - 页面问答和搜索摘要通过 `streamSimple` 调用虚拟模型，避免绕过宿主路由。
