@@ -601,7 +601,8 @@ async function searchWithProviders(
 		const untried = routing.providers.filter((provider) => !providers.includes(provider));
 		try {
 			if (untried.length === 0) throw new Error("Configured search routing has no untried providers");
-			return await searchWithConfiguredRouting(query, options, { ...routing, providers: untried });
+			const response = await searchWithConfiguredRouting(query, options, { ...routing, providers: untried });
+			return { ...response, providerErrors: [...failures, ...(response.providerErrors ?? [])] };
 		} catch (err) {
 			if (isAbortError(err)) throw err;
 			throw new Error(`${failureMessage}\n${errorMessage(err)}`);

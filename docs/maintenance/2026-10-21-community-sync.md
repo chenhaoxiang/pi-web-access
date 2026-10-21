@@ -24,6 +24,10 @@ Typecheck, build and all 1,423 tests passed with two workers. Runtime audit afte
 
 Independent review and exact-head CI are bound to the synchronization PR. Release assets must be built from the exact remote merge commit, include a source manifest and SHA-256 checksums, then be freshly downloaded and verified before installation. GitHub Release notes record those later outcomes; do not infer them from this source report.
 
+## Independent-review corrections
+
+The first exact-head review found a new xAI full-endpoint userinfo leak through native Request errors, lost diagnostics at the configured-array-to-route boundary, and a DeepSeek inline-code normalization error. All three were reproduced with synthetic inputs and mocked fetch, then fixed: reject URL userinfo before request construction; prepend initial array failures to route diagnostics; protect equal-length complete backtick runs. Six added provider-free regressions cover raw/tool/stored diagnostics, code-span fidelity and both username/password URL forms. Existing tests remain unchanged. Final typecheck/build/audit pass, and all **1,429** tests pass with two workers. The original review and red logs remain PR evidence; the later delta review binds the fix commit.
+
 ## Installation boundary
 
 The authorized rollout selects a new permanent versioned package directory only after artifact and provider-free host-loading checks. Preserve old packages and a settings backup; do not force-restart loaded parents, children or a shared broker. Disk selection does not prove existing sessions loaded the new code. Real credentials, paid queries/probes, provider settings and unrelated package declarations are not part of verification.

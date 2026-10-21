@@ -98,6 +98,9 @@ function resolveConfiguredResponsesUrl(value: unknown): string | undefined {
 	if (url.protocol !== "https:" && url.protocol !== "http:") {
 		throw new Error(`xaiResponsesUrl in ${CONFIG_PATH} must use http or https`);
 	}
+	if (url.username || url.password) {
+		throw new Error(`xaiResponsesUrl in ${CONFIG_PATH} must not include credentials`);
+	}
 	return url.toString();
 }
 

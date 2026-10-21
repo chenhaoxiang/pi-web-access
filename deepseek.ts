@@ -126,10 +126,15 @@ function unescapeMarkdownSegment(segment: string): string {
 }
 
 function normalizeInlineMarkdown(line: string): string {
-	return line
-		.split(/(`+[^`]*`+)/g)
-		.map((part, index) => (index % 2 === 0 ? unescapeMarkdownSegment(part) : part))
-		.join("");
+	let output = "";
+	let offset = 0;
+	// Only equal-length complete backtick runs delimit a code span. A shorter
+	// run inside it is code, so its following backslashes must remain literal.
+	for (const match of line.matchAll(/(?<!`)(`+)(?!`)[^\n]*?(?<!`)\1(?!`)/g)) {
+		output += unescapeMarkdownSegment(line.slice(offset, match.index)) + match[0];
+		offset = match.index! + match[0].length;
+	}
+	return output + unescapeMarkdownSegment(line.slice(offset));
 }
 
 function normalizeDeepSeekMarkdown(markdown: string): string {
