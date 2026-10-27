@@ -1,6 +1,6 @@
 {
   "name": "pi-web-access",
-  "version": "0.44.0-fork.1",
+  "version": "0.45.0-fork.1",
   "private": true,
   "description": "Web search, URL fetching, GitHub repo cloning, PDF extraction, YouTube video understanding, and local video analysis for Pi coding agent. Supports OpenAI, Brave, Parallel, TinyFish, Search1API, Searchinfinity, Querit, Tavily, Firecrawl, Crawl4AI, Jina, SERPdive, Kagi, Ollama, AnySearch, Bright Data SERP, SerpBase, SerpApi, Serply, You.com, SearXNG, degoog, Exa, Perplexity, Gemini, Kimi, and Mistral.",
   "type": "module",
@@ -45,8 +45,8 @@
   "forkMaintenance": {
     "repository": "chenhaoxiang/pi-web-access",
     "upstreamRepository": "nicobailon/pi-web-access",
-    "upstreamVersion": "0.44.0",
-    "upstreamCommit": "d0e323ac935e8753d11e1853b81c057e39dee4dc"
+    "upstreamVersion": "0.45.0",
+    "upstreamCommit": "d95fb1eb4350b90bd4285cbc84958085d136aa43"
   },
   "files": [
     "dist",
@@ -76,7 +76,7 @@
     "p-limit": "^6.1.0",
     "promise.try": "^2.0.1",
     "turndown": "^7.2.0",
-    "undici": "^8.11.2",
+    "undici": "^8.12.3",
     "unpdf": "^1.6.2"
   },
   "peerDependencies": {
@@ -108,6 +108,12 @@
     "@earendil-works/pi-codemode": "https://github.com/chenhaoxiang/pi/releases/download/v1.3.0-fork.1/earendil-works-pi-codemode-1.3.0-fork.1.tgz",
     "@earendil-works/pi-mcp": "https://github.com/chenhaoxiang/pi/releases/download/v1.3.0-fork.1/earendil-works-pi-mcp-1.3.0-fork.1.tgz",
     "@earendil-works/pi-telemetry": "https://github.com/chenhaoxiang/pi/releases/download/v1.3.0-fork.1/earendil-works-pi-telemetry-1.3.0-fork.1.tgz",
-    "@earendil-works/pi-tui": "https://github.com/chenhaoxiang/pi/releases/download/v1.3.0-fork.1/earendil-works-pi-tui-1.3.0-fork.1.tgz"
+    "@earendil-works/pi-tui": "https://github.com/chenhaoxiang/pi/releases/download/v1.3.0-fork.1/earendil-works-pi-tui-1.3.0-fork.1.tgz",
+    "body-parser": "^2.4.0",
+    "fast-uri": "^3.1.9",
+    "ip-address": "^10.7.5",
+    "qs": "^6.17.0",
+    "undici": "$undici",
+    "zod": "^4.6.7"
   }
 }

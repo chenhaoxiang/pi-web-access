@@ -55,6 +55,10 @@ export const GEMINI_MAX_HEADER_SIZE = 4 * 1024 * 1024;
 // header budget than the host agent's global dispatcher allows. Exported for
 // tests so the agent configuration can be asserted without network access.
 export function createGeminiFetch(undiciImpl: typeof import("undici")): typeof fetch {
+	for (const name of ["HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "http_proxy", "https_proxy", "all_proxy"]) {
+		const value = process.env[name];
+		if (value && !URL.canParse(value)) throw new TypeError(`Invalid URL in ${name}`);
+	}
 	const agent = new undiciImpl.EnvHttpProxyAgent({
 		allowH2: false,
 		connectTimeout: 30_000,
