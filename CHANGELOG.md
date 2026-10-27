@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.45.0-fork.1] - 2026-10-28
+
+- Integrate community v0.45.0 main through `d95fb1eb4350b90bd4285cbc84958085d136aa43`, retaining the maintained fork's ordered fallback diagnostics, explicit provider/privacy boundaries and private GitHub Release packaging.
+- Carry forward community 0.45 search-routing weak-result handling, off-topic fallback, field extraction, source metadata and upgrade-notice behavior without changing paid-provider or credential opt-ins.
+- Keep `0.44.0-fork.1` available for rollback and update the fork provenance metadata to the exact community main snapshot.
+
 ## [0.44.0-fork.1] - 2026-10-21
 
 - Integrate community main d0e323ac (0.44.0 source; latest upstream Release was 0.43.0), retaining ordered fallback diagnostics and explicit paid-provider/hosted-fetch boundaries. Update Hono to 4.13.13 for GHSA-5r4p-p66f-jhc7.

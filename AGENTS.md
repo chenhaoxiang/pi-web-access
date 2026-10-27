@@ -15,7 +15,7 @@ This repository is `chenhaoxiang/pi-web-access`; `nicobailon/pi-web-access` rema
 
 - `docs/maintenance/2026-10-21-sdk-baseline.md`: exact Pi 1.3 maintenance SDK/lock, host-owned runtime peers, provider-free regressions and source-only delivery boundaries.
 
-- [0.44.0-fork.1 community synchronization](docs/maintenance/2026-10-21-community-sync.md): exact main snapshot, retained fork behavior, validation and release/install boundaries.
+- [0.45.0-fork.1 community synchronization](docs/maintenance/2026-10-28-community-0.45.0.md): exact main snapshot, retained fork behavior, validation and release/install boundaries.
 
 - [0.42.0-fork.1 synchronization](docs/maintenance/2026-10-17-community-0.42.0.md): exact community baseline, explicit-only paid search/ADC/deferred exposure boundaries, retained routing diagnostics, validation and release/install evidence.
 
