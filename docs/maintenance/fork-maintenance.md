@@ -3,7 +3,7 @@ doc_type: runbook
 project: workspace
 component: pi-web-access
 product_line: shared
-release: 0.45.0-fork.1
+release: 0.46.0-fork.1
 status: active
 truth_mode: maintained
 created: 2026-10-15
@@ -16,7 +16,7 @@ owner: chx
 
 ## Scope and source
 
-The maintained repository is `chenhaoxiang/pi-web-access`; community source remains `nicobailon/pi-web-access`. The current source candidate is **0.45.0-fork.1**, based on community main version **0.45.0**, exact commit `d95fb1eb4350b90bd4285cbc84958085d136aa43`. Previous **0.44.0-fork.1** remains available for rollback. The initial **0.40.0-fork.1** baseline was community v0.40.0 at `9861ad72a11c9af419b39f9b00860708407f7025`. The package keeps the community license and author attribution. GitHub Release distribution is separate from npm: never publish under the original author's npm identity.
+The maintained repository is `chenhaoxiang/pi-web-access`; community source remains `nicobailon/pi-web-access`. The current source candidate is **0.46.0-fork.1**, based on community main version **0.46.0**, exact commit `fc63125608faef80c446687c79edd2626f511019`. Previous **0.45.0-fork.1** remains available for rollback. The initial **0.40.0-fork.1** baseline was community v0.40.0 at `9861ad72a11c9af419b39f9b00860708407f7025`. The package keeps the community license and author attribution. GitHub Release distribution is separate from npm: never publish under the original author's npm identity.
 
 The local trial history is in [search routing diagnostics](search-routing-diagnostics.md). Its 0.40.0-local.1 checks and stopped review are historical evidence, not approval or release evidence for a later fork commit.
 
@@ -28,9 +28,13 @@ The local trial history is in [search routing diagnostics](search-routing-diagno
 - Develop only in the owner-mandated external worktree root, under `<worktree-root>/pi-web-access/<task>`. The canonical source checkout remains on main and receives only verified safe fast-forwards.
 - Each synchronization uses an explicit community tip, diff/semantic review and regression run. Do not use a GitHub one-click fork sync to overwrite our fixes.
 
-## Community main 0.45.0 synchronization
+## Community main 0.46.0 synchronization
 
-The current synchronization adds weak-result/off-topic routing fallback, field extraction, source metadata and upgrade notices on top of the retained gateway/credential-redirect safety, explicit-only Linkup, opt-in DeepSeek fetch, xAI endpoint/timeout, configured-array fallback and short-page support. Retained diagnostics and validation are in [the 0.45.0 report](2026-10-28-community-0.45.0.md); package/release/install are separately verified.
+The current synchronization adds Cloudflare, SearchApi and Tabstack providers, curl/hosted-fetch routing, PDF text responses, source metadata, proxy persistence and Exa rate-limit diagnostics on top of the retained gateway/credential-redirect safety and explicit provider/privacy boundaries. The fork keeps valid-empty versus invalid Exa response diagnostics and pins `@hono/node-server` to the fixed `2.1.5` line. Retained diagnostics and validation are in [the 0.46.0 report](2026-10-30-community-0.46.0.md); package/release/install are separately verified.
+
+## Historical community main 0.45.0 synchronization
+
+The previous synchronization added weak-result/off-topic routing fallback, field extraction, source metadata and upgrade notices. Its source report is [the 0.45.0 report](2026-10-28-community-0.45.0.md).
 
 ## Historical community v0.42.0 synchronization
 
@@ -82,7 +86,7 @@ The packer creates local files only; it does not push, publish, install, change 
 After the matching GitHub Release/tag has actually been published, the reproducible source install is:
 
 ```bash
-pi install git:github.com/chenhaoxiang/pi-web-access@v0.45.0-fork.1
+pi install git:github.com/chenhaoxiang/pi-web-access@v0.46.0-fork.1
 ```
 
 `@main` is permitted only when deliberately following our moving integration branch. Never install `upstream-main` or the community npm package when fork behavior is required.

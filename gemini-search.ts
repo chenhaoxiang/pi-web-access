@@ -26,6 +26,7 @@ import { isSearch1APIAvailable, searchWithSearch1API } from "./search1api.ts";
 import { isSearchinfinityAvailable, searchWithSearchinfinity } from "./searchinfinity.ts";
 import { isQueritAvailable, searchWithQuerit } from "./querit.ts";
 import { isTavilyAvailable, searchWithTavily } from "./tavily.ts";
+import { isTabstackAvailable, searchWithTabstack } from "./tabstack.ts";
 import { isYouAvailable, searchWithYou } from "./you.ts";
 import { isFirecrawlAvailable, searchWithFirecrawl } from "./firecrawl.ts";
 import { isJinaSearchAvailable, searchWithJina } from "./jina-search.ts";
@@ -51,12 +52,14 @@ import { isKeenableAvailable, searchWithKeenable } from "./keenable.ts";
 import { isCeramicAvailable, searchWithCeramic } from "./ceramic.ts";
 import { isLinkupAvailable, searchWithLinkup } from "./linkup.ts";
 import { isNineRouterAvailable, searchWithNineRouter } from "./ninerouter.ts";
+import { isCloudflareSearchAvailable, searchWithCloudflare } from "./cloudflare-search.ts";
+import { isSearchApiAvailable, searchWithSearchApi } from "./searchapi.ts";
 import { isDeepSeekAvailable, searchWithDeepSeek } from "./deepseek.ts";
 import { isKimiSearchAvailable, searchWithKimi } from "./kimi-search.ts";
 import { isMistralAvailable, searchWithMistral } from "./mistral-search.ts";
 import { getWebSearchConfigPath } from "./utils.ts";
 
-export const RESOLVED_SEARCH_PROVIDERS = ["openai", "brave", "parallel", "parallel-mcp", "tinyfish", "search1api", "searchinfinity", "querit", "tavily", "you", "firecrawl", "jina", "searxng", "degoog", "duckduckgo", "perplexity", "gemini", "kimi", "exa", "serpdive", "kagi", "ollama", "anysearch", "xai", "mistral", "brightdata", "serpbase", "serpapi", "serper", "serply", "valyu", "bocha", "xcrawl", "baizhi", "zai", "keenable", "ceramic", "deepseek", "linkup", "ninerouter"] as const;
+export const RESOLVED_SEARCH_PROVIDERS = ["openai", "brave", "parallel", "parallel-mcp", "tinyfish", "search1api", "searchinfinity", "querit", "tavily", "you", "firecrawl", "jina", "searxng", "degoog", "duckduckgo", "perplexity", "gemini", "kimi", "exa", "serpdive", "kagi", "ollama", "anysearch", "xai", "mistral", "brightdata", "serpbase", "serpapi", "serper", "serply", "valyu", "bocha", "xcrawl", "baizhi", "zai", "keenable", "ceramic", "deepseek", "linkup", "ninerouter", "cloudflare", "searchapi", "tabstack"] as const;
 export const SEARCH_PROVIDERS = ["auto", "all", ...RESOLVED_SEARCH_PROVIDERS] as const;
 
 export type ResolvedSearchProvider = typeof RESOLVED_SEARCH_PROVIDERS[number];
@@ -125,7 +128,7 @@ export interface AttributedSearchResponse extends SearchResponse {
 
 const CONFIG_PATH = getWebSearchConfigPath();
 const DEFAULT_SEARCH_MODEL = "gemini-3.6-flash";
-// Explicit-only providers (Parallel MCP, degoog, DuckDuckGo, Kimi, AnySearch, XCrawl, xAI, Mistral, Bright Data, SerpBase, SerpApi, Serper, Serply, You.com, Valyu, Baizhi, Z.ai, Keenable, Ceramic, DeepSeek, Linkup, 9router) are deliberately absent:
+// Explicit-only providers (Parallel MCP, degoog, DuckDuckGo, Kimi, AnySearch, XCrawl, xAI, Mistral, Bright Data, SerpBase, SerpApi, Serper, Serply, You.com, Valyu, Baizhi, Z.ai, Keenable, Ceramic, DeepSeek, Linkup, 9router, Cloudflare, SearchApi, Tabstack) are deliberately absent:
 // `all` must never fan out to an opt-in or paid provider without the user asking for it.
 export const ALL_SEARCH_PROVIDERS: ResolvedSearchProvider[] = ["searxng", "openai", "exa", "brave", "parallel", "tinyfish", "search1api", "searchinfinity", "querit", "tavily", "firecrawl", "jina", "serpdive", "kagi", "ollama", "perplexity", "gemini", "bocha"];
 const VALID_ROUTING_KINDS = ["transient", "quota", "network", "invalid-response", "unsupported", "empty", "domain-miss", "off-topic"] as const;
@@ -489,6 +492,7 @@ async function searchWithResolvedProvider(
 	if (provider === "searchinfinity") return { ...(await searchWithSearchinfinity(query, options)), provider };
 	if (provider === "querit") return { ...(await searchWithQuerit(query, options)), provider };
 	if (provider === "tavily") return { ...(await searchWithTavily(query, options)), provider };
+	if (provider === "tabstack") return { ...(await searchWithTabstack(query, options)), provider };
 	if (provider === "you") return { ...(await searchWithYou(query, options)), provider };
 	if (provider === "firecrawl") return { ...(await searchWithFirecrawl(query, options)), provider };
 	if (provider === "jina") return { ...(await searchWithJina(query, options)), provider };
@@ -511,6 +515,8 @@ async function searchWithResolvedProvider(
 	if (provider === "ceramic") return { ...(await searchWithCeramic(query, options)), provider };
 	if (provider === "linkup") return { ...(await searchWithLinkup(query, options)), provider };
 	if (provider === "ninerouter") return { ...(await searchWithNineRouter(query, options)), provider };
+	if (provider === "cloudflare") return { ...(await searchWithCloudflare(query, options)), provider };
+	if (provider === "searchapi") return { ...(await searchWithSearchApi(query, options)), provider };
 	if (provider === "deepseek") return { ...(await searchWithDeepSeek(query, options)), provider };
 	if (provider === "xcrawl") return { ...(await searchWithXCrawl(query, options)), provider };
 	if (provider === "perplexity") return { ...(await searchWithPerplexity(query, options)), provider };
@@ -548,6 +554,7 @@ async function isResolvedProviderAvailable(provider: ResolvedSearchProvider, opt
 	if (provider === "searchinfinity") return isSearchinfinityAvailable();
 	if (provider === "querit") return isQueritAvailable();
 	if (provider === "tavily") return isTavilyAvailable();
+	if (provider === "tabstack") return isTabstackAvailable();
 	if (provider === "you") return isYouAvailable();
 	if (provider === "firecrawl") return isFirecrawlAvailable();
 	if (provider === "jina") return isJinaSearchAvailable();
@@ -570,6 +577,8 @@ async function isResolvedProviderAvailable(provider: ResolvedSearchProvider, opt
 	if (provider === "ceramic") return isCeramicAvailable();
 	if (provider === "linkup") return isLinkupAvailable();
 	if (provider === "ninerouter") return isNineRouterAvailable();
+	if (provider === "cloudflare") return isCloudflareSearchAvailable();
+	if (provider === "searchapi") return isSearchApiAvailable();
 	if (provider === "deepseek") return isDeepSeekAvailable();
 	if (provider === "xcrawl") return isXcrawlAvailable();
 	if (provider === "perplexity") return isPerplexityAvailable();
@@ -596,6 +605,7 @@ export function providerLabel(provider: ResolvedSearchProvider): string {
 	if (provider === "search1api") return "Search1API";
 	if (provider === "searchinfinity") return "Searchinfinity";
 	if (provider === "querit") return "Querit";
+	if (provider === "tabstack") return "Tabstack";
 	if (provider === "firecrawl") return "Firecrawl";
 	if (provider === "serpdive") return "SERPdive";
 	if (provider === "searxng") return "SearXNG";
@@ -621,6 +631,8 @@ export function providerLabel(provider: ResolvedSearchProvider): string {
 	if (provider === "ceramic") return "Ceramic";
 	if (provider === "linkup") return "Linkup";
 	if (provider === "ninerouter") return "9router";
+	if (provider === "cloudflare") return "Cloudflare";
+	if (provider === "searchapi") return "SearchApi";
 	if (provider === "deepseek") return "DeepSeek";
 	return provider.charAt(0).toUpperCase() + provider.slice(1);
 }
@@ -650,7 +662,7 @@ async function searchWithProviders(
 			: await isResolvedProviderAvailable(provider, options),
 	})))).filter((entry) => entry.available).map((entry) => entry.provider);
 	if (providers.length === 0) {
-		throw new Error("No configured search provider available for provider \"all\". Parallel MCP, degoog, DuckDuckGo, Kimi, AnySearch, xAI, Mistral, Bright Data, SerpBase, SerpApi, Serper, Serply, You.com, Valyu, Baizhi, Z.ai, XCrawl, Keenable, Ceramic, DeepSeek, Linkup, and 9router are excluded.");
+		throw new Error("No configured search provider available for provider \"all\". Parallel MCP, degoog, DuckDuckGo, Kimi, AnySearch, xAI, Mistral, Bright Data, SerpBase, SerpApi, Serper, Serply, You.com, Valyu, Baizhi, Z.ai, XCrawl, Keenable, Ceramic, DeepSeek, Linkup, 9router, Cloudflare, SearchApi, and Tabstack are excluded.");
 	}
 
 	const settled = await Promise.allSettled(
@@ -903,7 +915,7 @@ export async function search(query: string, options: FullSearchOptions = {}): Pr
 		"  3. Set OPENAI_API_KEY, BRAVE_API_KEY, PARALLEL_API_KEY, TINYFISH_API_KEY, SEARCH1API_KEY, SEARCHINFINITY_API_KEY, QUERIT_API_KEY, TAVILY_API_KEY, FIRECRAWL_BASE_URL, JINA_API_KEY, SERPDIVE_API_KEY, KAGI_API_KEY, BOCHA_API_KEY, OLLAMA_API_KEY, SEARXNG_BASE_URL, EXA_API_KEY, PERPLEXITY_API_KEY, GEMINI_API_KEY, or CLOUDFLARE_API_KEY env vars\n" +
 		"  4. Set GOOGLE_GEMINI_BASE_URL with CLOUDFLARE_API_KEY for Cloudflare AI Gateway routing\n" +
 		"  5. Sign into gemini.google.com in a supported Chromium-based browser\n" +
-		"  6. Explicitly select provider: \"anysearch\" for anonymous AnySearch, \"xcrawl\" for XCrawl, \"xai\" for Grok, \"mistral\" for Mistral Conversations web search, \"brightdata\" with brightdataSerpZone for paid Bright Data SERP, \"serpbase\", \"serpapi\", \"serper\", or \"serply\" for Google SERP, \"you\" for You.com, \"zai\" for Z.ai GLM Coding Plan search, \"valyu\" for research search, \"keenable\" for keyless Keenable search, \"ceramic\" for Ceramic search, \"deepseek\" for DeepSeek search, \"linkup\" for Linkup search, or \"ninerouter\" for a 9router gateway"
+		"  6. Explicitly select provider: \"anysearch\" for anonymous AnySearch, \"xcrawl\" for XCrawl, \"xai\" for Grok, \"mistral\" for Mistral Conversations web search, \"brightdata\" with brightdataSerpZone for paid Bright Data SERP, \"serpbase\", \"serpapi\", \"serper\", or \"serply\" for Google SERP, \"you\" for You.com, \"zai\" for Z.ai GLM Coding Plan search, \"valyu\" for research search, \"keenable\" for keyless Keenable search, \"ceramic\" for Ceramic search, \"deepseek\" for DeepSeek search, \"linkup\" for Linkup search, \"ninerouter\" for a 9router gateway, \"cloudflare\" for the Cloudflare Web Search API, \"searchapi\" for SearchApi Google search, or \"tabstack\" for Tabstack Research"
 	);
 }
 

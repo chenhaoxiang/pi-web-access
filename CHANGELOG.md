@@ -2,7 +2,44 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [0.46.0-fork.1] - 2026-10-30
+
+- Integrate community v0.46.0 main through `fc63125608faef80c446687c79edd2626f511019`, retaining Exa empty/invalid diagnostics, ordered fallback errors, explicit provider/privacy boundaries and the private GitHub Release packaging contract.
+- Carry forward the community Cloudflare/SearchApi/Tabstack providers, curl/hosted fetch routing, PDF text responses, source metadata and proxy/rate-limit fixes without enabling new paid providers by default.
+- Keep `0.45.0-fork.1` available for rollback and update fork provenance metadata to the exact community main snapshot.
+
+## [0.46.0] - 2026-10-28
+
+### Highlights
+
+- Read more pages that block bots. Page fetches can connect the way Chrome does: in a test of 68 mostly bot-protected pages, readable pages went from 18 to about 31. Blocked pages can also be handed to Exa or Tabstack.
+- Three new search options, each used only when you pick it: Cloudflare, Google through SearchApi, and Tabstack, which returns one cited answer instead of a list of links.
+- Over MCP, the web tools take half as much of every request to the model (about 1.75k → 0.9k tokens).
+- Reading a PDF now gives you its text instead of a note saying where the file was saved.
+- A proxy you set keeps working after Pi reloads, and a rate-limited free search now says so instead of claiming no search provider is set up.
+
+### Added
+
+- Search through the [Cloudflare Web Search API](https://developers.cloudflare.com/web-search/) with `provider: "cloudflare"`. It runs on Ceramic, Exa, or Linkup (`cloudflareSearchProvider`, default Ceramic) through your AI Gateway, billed to AI Gateway credits or a provider key stored on the gateway. It reads the `CLOUDFLARE_API_KEY` and `CLOUDFLARE_ACCOUNT_ID` environment variables, or `cloudflareApiKey` and `cloudflareAccountId` in `web-search.json`; a Cloudflare key saved with Pi's `/login` is not used. It runs only when you name it, so `auto` and `all` never spend on it. Thanks to [@kestermcullough](https://github.com/kestermcullough) for [PR #639](https://github.com/nicobailon/pi-web-access/pull/639).
+- `fetchContent.curl` in `web-search.json` sends the extension's own page fetch through a curl command instead of Node's fetch. Point it at [curl-impersonate](https://github.com/lexiforest/curl-impersonate), which connects the way Chrome does, and many sites that answer Node's fetch with HTTP 403 send the page instead. In a test of 68 pages, most of them behind bot protection, the number the extension could read went from 18 to about 31. Through curl, the extension leaves out its default `User-Agent` so the command's browser `User-Agent` is used. Without the setting, Node's fetch is used as before. Thanks to [@kestermcullough](https://github.com/kestermcullough) for [PR #640](https://github.com/nicobailon/pi-web-access/pull/640).
+- `fetch_content` can read a page through Exa when a site refuses the direct fetch, using the Exa key you already set for search (`exaApiKey` or `EXA_API_KEY`). Add `"exa"` to `fetchRouting.providers` and set `fetchRouting.allowRemoteHostedProviders` to `true`; the page address is sent to Exa, and Exa bills each page it reads. A page Exa can't read comes back as an Exa error, not an empty page. Thanks to [@ccc592](https://github.com/ccc592) for [issue #633](https://github.com/nicobailon/pi-web-access/issues/633).
+- Search Google through [SearchApi](https://www.searchapi.io) with `provider: "searchapi"`, configured with `searchapiApiKey` or `SEARCHAPI_API_KEY` (and an optional `searchapiBaseUrl` gateway). It runs only when you name it or list it in `searchRouting`; `auto` and `provider: "all"` never choose it. Domain filters become `site:` clauses and recency maps to `time_period`. Each search returns at most 10 results, one Google results page. Thanks to [@gabsferreira](https://github.com/gabsferreira) for [PR #645](https://github.com/nicobailon/pi-web-access/pull/645).
+- Search with [Tabstack](https://tabstack.ai) Research, which returns a cited answer with its sources, using `provider: "tabstack"` and `tabstackApiKey` (or `TABSTACK_API_KEY`). It runs only when you name it; `auto` and `all` never choose it. Research runs in `fast` mode unless `tabstackResearchMode` is `"balanced"`. Tabstack Extract can also fetch blocked or JavaScript-heavy pages once you add `"tabstack"` to `fetchRouting.providers` and turn on `fetchRouting.allowRemoteHostedProviders`. Thanks to [@tessak22](https://github.com/tessak22) for [PR #641](https://github.com/nicobailon/pi-web-access/pull/641).
+
+### Changed
+
+- The MCP server's tool definitions shrink from about 7,000 to about 3,500 characters (about 1,750 to 900 tokens) on every request to the model. The `provider` parameter no longer spells out every provider name; an unknown name is still rejected before any request, and the error lists the valid names. Thanks to [@mikeyobrien](https://github.com/mikeyobrien) for [PR #644](https://github.com/nicobailon/pi-web-access/pull/644).
+
+### Fixed
+
+- `fetch_content` recognizes mixed-case Content-Type headers, so HTML still goes through readable extraction and Cloudflare challenge detection, and PDF and binary types are handled like lowercase types. Thanks to [@Nyarlathoteppppp](https://github.com/Nyarlathoteppppp) for [PR #632](https://github.com/nicobailon/pi-web-access/pull/632).
+- Reading a PDF with `fetch_content` now returns the PDF's text, with the path of the saved Markdown file above it. Before, the result was only a "saved to" notice, and `get_search_content` returned that same notice, so a model that cannot open local files had no way to read the PDF. Thanks to [@ccc592](https://github.com/ccc592) for [issue #634](https://github.com/nicobailon/pi-web-access/issues/634).
+- Searching without an Exa key no longer says that no search provider is set up when Exa's free search answered but couldn't be used. When the free Exa search is rate-limited, the error now says so and tells you to add an Exa API key; when Exa sends back something without search results, the error shows what it sent. Search routing treats these like any other rate limit or unreadable reply, so `fallbackOn` can move on to the next provider. A search that finds nothing is now an empty result, not an error. Thanks to [@vishwajeet7381](https://github.com/vishwajeet7381) for [issue #638](https://github.com/nicobailon/pi-web-access/issues/638).
+- When no summary model can be used, the reason now lists every model that was tried and why each one failed, instead of naming only the last one. Before, a session with none of the default summary models set up showed one model as "not enabled", which pointed at the wrong fix. Thanks to [@vishwajeet7381](https://github.com/vishwajeet7381) for [issue #642](https://github.com/nicobailon/pi-web-access/issues/642).
+- A proxy you set could be skipped after Pi reloaded its extensions, so web requests went out directly instead of through it. Requests now go through the proxy you chose. Thanks to [@xiangsheng](https://github.com/xiangsheng) for [issue #643](https://github.com/nicobailon/pi-web-access/issues/643).
+- `source_check` marks OpenAI and xAI citation snippets as `[provider summary, not page text]`. Those snippets are cut from the search provider's own answer, not from the cited page, and were shown as if they were quotes from it. Thanks to [@panchogn](https://github.com/panchogn) for [PR #629](https://github.com/nicobailon/pi-web-access/pull/629).
+- `fetch_content` answer mode asks models that can't turn thinking off, such as Claude Opus 5.5 and Sonnet 5.5, for their lowest thinking level instead of leaving it to the provider. Models that can turn thinking off still run without it. Thanks to [@panchogn](https://github.com/panchogn) for [PR #629](https://github.com/nicobailon/pi-web-access/pull/629).
+- Requests sent through a `proxy` no longer follow redirects inside curl when `~/.curlrc` turns on `location`, so the extension checks each redirect again. A curl download that fails partway is now an error instead of a short response. A URL with `[ ]` or `{ }` in it, such as `?ids[]=1`, is now sent as written instead of failing or being turned into several requests.
 
 ## [0.45.0-fork.1] - 2026-10-28
 

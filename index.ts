@@ -50,6 +50,7 @@ import { isSearch1APIAvailable } from "./search1api.ts";
 import { isSearchinfinityAvailable } from "./searchinfinity.ts";
 import { isQueritAvailable } from "./querit.ts";
 import { isTavilyAvailable } from "./tavily.ts";
+import { isTabstackAvailable } from "./tabstack.ts";
 import { isYouAvailable } from "./you.ts";
 import { isFirecrawlAvailable } from "./firecrawl.ts";
 import { isJinaSearchAvailable } from "./jina-search.ts";
@@ -73,6 +74,8 @@ import { isKeenableAvailable } from "./keenable.ts";
 import { isCeramicAvailable } from "./ceramic.ts";
 import { isLinkupAvailable } from "./linkup.ts";
 import { isNineRouterAvailable } from "./ninerouter.ts";
+import { isCloudflareSearchAvailable } from "./cloudflare-search.ts";
+import { isSearchApiAvailable } from "./searchapi.ts";
 import { isDeepSeekAvailable } from "./deepseek.ts";
 import { isBaizhiAvailable } from "./baizhi.ts";
 import { isZaiAvailable } from "./zai.ts";
@@ -343,6 +346,7 @@ async function getProviderAvailability(ctx: ExtensionContext): Promise<ProviderA
 		searchinfinity: allowedProviders.has("searchinfinity") && isSearchinfinityAvailable(),
 		querit: allowedProviders.has("querit") && isQueritAvailable(),
 		tavily: allowedProviders.has("tavily") && isTavilyAvailable(),
+		tabstack: allowedProviders.has("tabstack") && isTabstackAvailable(),
 		you: allowedProviders.has("you") && isYouAvailable(),
 		firecrawl: allowedProviders.has("firecrawl") && isFirecrawlAvailable(),
 		jina: allowedProviders.has("jina") && isJinaSearchAvailable(),
@@ -373,6 +377,8 @@ async function getProviderAvailability(ctx: ExtensionContext): Promise<ProviderA
 		ceramic: allowedProviders.has("ceramic") && isCeramicAvailable(),
 		linkup: allowedProviders.has("linkup") && isLinkupAvailable(),
 		ninerouter: allowedProviders.has("ninerouter") && isNineRouterAvailable(),
+		cloudflare: allowedProviders.has("cloudflare") && isCloudflareSearchAvailable(),
+		searchapi: allowedProviders.has("searchapi") && isSearchApiAvailable(),
 		deepseek: allowedProviders.has("deepseek") && isDeepSeekAvailable(),
 	};
 	return {

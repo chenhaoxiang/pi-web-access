@@ -285,6 +285,7 @@ export function startCuratorServer(
 		if (provider === "searchinfinity") return availableProviders.searchinfinity;
 		if (provider === "querit") return availableProviders.querit;
 		if (provider === "tavily") return availableProviders.tavily;
+		if (provider === "tabstack") return availableProviders.tabstack;
 		if (provider === "firecrawl") return availableProviders.firecrawl;
 		if (provider === "jina") return availableProviders.jina;
 		if (provider === "serpdive") return availableProviders.serpdive;
@@ -314,6 +315,8 @@ export function startCuratorServer(
 		if (provider === "ceramic") return availableProviders.ceramic;
 		if (provider === "linkup") return availableProviders.linkup;
 		if (provider === "ninerouter") return availableProviders.ninerouter;
+		if (provider === "cloudflare") return availableProviders.cloudflare;
+		if (provider === "searchapi") return availableProviders.searchapi;
 		if (provider === "deepseek") return availableProviders.deepseek;
 		return false;
 	}
