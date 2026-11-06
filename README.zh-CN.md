@@ -4,15 +4,15 @@
 
 - `main`：我们的整合与发布主线
 - `upstream-main`：社区 `main` 的只读镜像，不是安装来源
-- 当前维护版本：`0.46.0-fork.1`
-- 社区基线：社区 main 中的 `0.46.0`，提交 `fc63125608faef80c446687c79edd2626f511019`
+- 当前维护版本：`0.47.0-fork.1`
+- 社区基线：社区稳定版 `0.47.0`，提交 `322e44fafc1aaa691779cdf2116584e67edd7645`
 
 ## 安装
 
 对应 GitHub Release/tag 发布完成后，使用固定版本：
 
 ```bash
-pi install git:github.com/chenhaoxiang/pi-web-access@v0.46.0-fork.1
+pi install git:github.com/chenhaoxiang/pi-web-access@v0.47.0-fork.1
 ```
 
 如需跟随维护主线：
@@ -24,6 +24,13 @@ pi install git:github.com/chenhaoxiang/pi-web-access@main
 生产或可复现环境优先使用 GitHub Release 中的编译包、来源清单和 `SHA256SUMS`。不要安装 `upstream-main`，也不要用社区 npm 包替代维护版。
 
 安装新版本不会替换已经运行的 Pi 进程。让当前任务结束后再 `/reload` 或重启；旧版本应保留到新版本完成验收。
+
+## 社区 0.47 更新
+
+- 新增 Sofya、Outcrawl 搜索，必须显式选择或加入配置路由；`auto`、`all` 不会自动启用。
+- `lockProxy` 可阻止单次调用绕过已配置代理，不自动更改本机配置。
+- GitHub README 提取上限提高至 100K 字符，克隆使用系统临时目录。
+- 保留 Exa 诊断、有序回退错误及现有凭据、隐私和付费渠道边界。
 
 ## 社区 0.43 / 0.44 更新
 
