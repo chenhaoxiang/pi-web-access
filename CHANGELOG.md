@@ -2,6 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.47.0-fork.1] - 2026-11-06
+
+- Integrate community v0.47.0 through 322e44faf, retaining Exa diagnostics, ordered fallback errors, explicit provider/privacy boundaries and private release provenance.
+- Add explicit-only Sofya/Outcrawl, proxy-lock enforcement and longer GitHub README extraction without changing existing routing or opt-ins.
+
+## [Unreleased]
+
+## [0.47.0] - 2026-11-04
+
+### Highlights
+
+- Two new search options, each used only when you pick it: Sofya, which can filter by site and date, and Outcrawl.
+- If your proxy adds your real API keys, you can now lock it in so the model can't skip it and end up with confusing "bad key" errors.
+- Fetching a GitHub repository now gives you READMEs up to 100K characters instead of cutting them off at 8K.
+- On Windows, cloned GitHub repositories go to your temp folder instead of C:\tmp.
+
+### Added
+
+- Search with [Sofya](https://sofya.co) using `provider: "sofya"`, configured with `sofyaApiKey` or `SOFYA_API_KEY` (and an optional `sofyaBaseUrl` gateway). It runs only when you name it or list it in `searchRouting`: `auto` and `provider: "all"` never choose it. Domain filters map to Sofya's `include_domains`/`exclude_domains` and are reapplied locally; recency maps to its `freshness` filter. Each search returns at most 20 results. Thanks to [@yusufgurdogan](https://github.com/yusufgurdogan) for [PR #659](https://github.com/nicobailon/pi-web-access/pull/659).
+- Search with [Outcrawl](https://outcrawl.ai) using `provider: "outcrawl"`, configured with `outcrawlApiKey` or `OUTCRAWL_API_KEY` (and an optional `outcrawlBaseUrl` gateway). It runs only when you name it or list it in `searchRouting`: `auto` and `provider: "all"` never choose it. Domain filters become `site:` clauses and are reapplied locally; Outcrawl has no date filter, so recency is not applied. Each search returns at most 20 results. Thanks to [@heydryft](https://github.com/heydryft) for [PR #656](https://github.com/nicobailon/pi-web-access/pull/656).
+- `lockProxy: true` in `web-search.json` makes the `proxy` you set there the only route for `web_search`, `source_check`, and `fetch_content`. A tool call that passes `proxy: ""` (direct connection) or a different proxy now fails before anything is sent, with a message saying to leave `proxy` out, instead of quietly skipping your proxy. This matters when the proxy adds your real API keys and the extension only holds placeholders: a model that sends `proxy: ""` used to get a 401 that looked like a bad key. With `lockProxy` set and no `proxy` configured, every call fails instead of connecting directly. The tool descriptions also tell the model to leave `proxy` out by default. Thanks to [@xiangsheng](https://github.com/xiangsheng) for [#653](https://github.com/nicobailon/pi-web-access/issues/653).
+
+### Fixed
+
+- On Windows, GitHub repositories cloned by `fetch_content` now go to your temp folder (`%TEMP%\pi-github-repos`) instead of `C:\tmp\pi-github-repos` next to Windows and Program Files. On macOS they move to your per-user temp folder; Linux is unchanged. A `githubClone.clonePath` you set still wins. Thanks to [@bLueriVerLHR](https://github.com/bLueriVerLHR) for [PR #655](https://github.com/nicobailon/pi-web-access/pull/655).
+- `fetch_content` on a GitHub repository now returns READMEs up to 100K characters instead of cutting them at 8K, the same limit used when you fetch a single file. Long results are still shortened to `maxInlineContentChars` in the reply, with the rest readable through `get_search_content`. Thanks to [@huiyi9420](https://github.com/huiyi9420) for [#658](https://github.com/nicobailon/pi-web-access/issues/658).
+
 ## [0.46.0-fork.1] - 2026-10-30
 
 - Integrate community v0.46.0 main through `fc63125608faef80c446687c79edd2626f511019`, retaining Exa empty/invalid diagnostics, ordered fallback errors, explicit provider/privacy boundaries and the private GitHub Release packaging contract.

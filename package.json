@@ -1,8 +1,8 @@
 {
   "name": "pi-web-access",
-  "version": "0.46.0-fork.1",
+  "version": "0.47.0-fork.1",
   "private": true,
-  "description": "Web search, URL fetching, GitHub repo cloning, PDF extraction, YouTube video understanding, and local video analysis for Pi coding agent. Supports OpenAI, Brave, Parallel, TinyFish, Search1API, Searchinfinity, Querit, Tavily, Firecrawl, Crawl4AI, Jina, SERPdive, Kagi, Ollama, AnySearch, Bright Data SERP, SerpBase, SerpApi, Serply, SearchApi, You.com, SearXNG, degoog, Exa, Perplexity, Gemini, Kimi, Mistral, and Tabstack.",
+  "description": "Web search, URL fetching, GitHub repo cloning, PDF extraction, YouTube video understanding, and local video analysis for Pi coding agent. Supports OpenAI, Brave, Parallel, TinyFish, Search1API, Searchinfinity, Querit, Tavily, Firecrawl, Crawl4AI, Jina, SERPdive, Kagi, Ollama, AnySearch, Bright Data SERP, SerpBase, SerpApi, Serply, SearchApi, Outcrawl, Sofya, You.com, SearXNG, degoog, Exa, Perplexity, Gemini, Kimi, Mistral, and Tabstack.",
   "type": "module",
   "bin": {
     "pi-web-access-mcp": "dist/mcp-cli.js"
@@ -46,8 +46,8 @@
   "forkMaintenance": {
     "repository": "chenhaoxiang/pi-web-access",
     "upstreamRepository": "nicobailon/pi-web-access",
-    "upstreamVersion": "0.46.0",
-    "upstreamCommit": "fc63125608faef80c446687c79edd2626f511019"
+    "upstreamVersion": "0.47.0",
+    "upstreamCommit": "322e44fafc1aaa691779cdf2116584e67edd7645"
   },
   "files": [
     "dist",
