@@ -84,7 +84,12 @@ try {
 	stagedManifest.pi = { ...(stagedManifest.pi ?? {}), extensions: ["./dist"] };
 	writeFileSync(stagedManifestPath, `${JSON.stringify(stagedManifest, null, 2)}\n`);
 	const packOutput = run("npm", ["pack", "--ignore-scripts", "--json", "--pack-destination", outDir], join(stage, "package"));
-	const packInfo = JSON.parse(packOutput)[0];
+	const packed = JSON.parse(packOutput);
+	// npm <=11 returns an array; npm 12 keys pack results by package name.
+	const packInfo = Array.isArray(packed) ? packed[0] : packed[pkg.name];
+	if (packInfo?.name !== pkg.name || packInfo.version !== pkg.version || typeof packInfo.filename !== "string" || basename(packInfo.filename) !== packInfo.filename) {
+		fail("npm pack did not return the expected fork package identity and filename");
+	}
 	const tarball = join(outDir, packInfo.filename);
 	if (!existsSync(tarball)) fail(`npm pack did not create ${tarball}`);
 	const manifest = {
