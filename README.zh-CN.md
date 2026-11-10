@@ -4,15 +4,15 @@
 
 - `main`：我们的整合与发布主线
 - `upstream-main`：社区 `main` 的只读镜像，不是安装来源
-- 当前维护版本：`0.47.0-fork.1`
-- 社区基线：社区稳定版 `0.47.0`，提交 `322e44fafc1aaa691779cdf2116584e67edd7645`
+- 当前维护版本：`0.47.0-fork.2`
+- 社区基线：社区稳定版 `0.47.0`，提交 `6dd57b7f5a0c3041053e65a28f5f425323ec95f9`
 
 ## 安装
 
 对应 GitHub Release/tag 发布完成后，使用固定版本：
 
 ```bash
-pi install git:github.com/chenhaoxiang/pi-web-access@v0.47.0-fork.1
+pi install git:github.com/chenhaoxiang/pi-web-access@v0.47.0-fork.2
 ```
 
 如需跟随维护主线：
@@ -24,6 +24,14 @@ pi install git:github.com/chenhaoxiang/pi-web-access@main
 生产或可复现环境优先使用 GitHub Release 中的编译包、来源清单和 `SHA256SUMS`。不要安装 `upstream-main`，也不要用社区 npm 包替代维护版。
 
 安装新版本不会替换已经运行的 Pi 进程。让当前任务结束后再 `/reload` 或重启；旧版本应保留到新版本完成验收。
+
+## 社区 0.47 后续同步（0.47.0-fork.2 候选）
+
+- 同步上述精确社区 main 的 4 个提交，社区 package 仍为 `0.47.0`。源码候选、PR/CI、独立审查、Release、安装及实际 loaded 分别验收；此阶段不发布或安装。
+- AnySearch 在本地应用 include/exclude 域名过滤，并将请求结果数限制为 10；空结果可按显式 `empty` / `domain-miss` 策略回退。
+- 新增显式选择的付费 cloro Google / AI Mode，不进入 `auto` 或 `all`。
+- DuckDuckGo 每进程限制请求间隔与预算，通过配置目录下的文件共享 bot-check 冷却；不会自动改写搜索配置。
+- 显式 `fetch_content` answer 模式可把图片/视频帧交给已选择且支持图片的回答模型；文本模型在调用前报错，不另选渠道。
 
 ## 社区 0.47 更新
 
