@@ -21,7 +21,7 @@ import {
 	type StoredSearchData,
 } from "./storage.ts";
 import { activityMonitor, type ActivityEntry } from "./activity.ts";
-import { startCuratorServer, type CuratorSearchEntry, type CuratorServerHandle, type IndexedCuratorSearchEntry } from "./curator-server.ts";
+import type { CuratorSearchEntry, CuratorServerHandle, IndexedCuratorSearchEntry } from "./curator-server.ts";
 import {
 	buildDeterministicSummary,
 	generateSummaryDraft,
@@ -79,6 +79,8 @@ import { isSearchApiAvailable } from "./searchapi.ts";
 import { isOutcrawlAvailable } from "./outcrawl.ts";
 import { isSofyaAvailable } from "./sofya.ts";
 import { isCloroAvailable } from "./cloro.ts";
+import { isAutomAvailable } from "./autom.ts";
+import { isSpecStreamAvailable } from "./specstream.ts";
 import { isDeepSeekAvailable } from "./deepseek.ts";
 import { isBaizhiAvailable } from "./baizhi.ts";
 import { isZaiAvailable } from "./zai.ts";
@@ -385,6 +387,8 @@ async function getProviderAvailability(ctx: ExtensionContext): Promise<ProviderA
 		outcrawl: allowedProviders.has("outcrawl") && isOutcrawlAvailable(),
 		sofya: allowedProviders.has("sofya") && isSofyaAvailable(),
 		cloro: allowedProviders.has("cloro") && isCloroAvailable(),
+		autom: allowedProviders.has("autom") && isAutomAvailable(),
+		specstream: allowedProviders.has("specstream") && isSpecStreamAvailable(),
 		deepseek: allowedProviders.has("deepseek") && isDeepSeekAvailable(),
 	};
 	return {
@@ -1162,6 +1166,7 @@ export default function (pi: ExtensionAPI) {
 				: searchAbort.signal;
 
 			const sessionToken = randomUUID();
+			const { startCuratorServer } = await import("./curator-server.ts");
 			handle = await startCuratorServer(
 				{
 					queries: pc.queryList,
@@ -2370,6 +2375,7 @@ export default function (pi: ExtensionAPI) {
 			}
 
 			try {
+				const { startCuratorServer } = await import("./curator-server.ts");
 				const handle = await startCuratorServer(
 					{
 						queries,
