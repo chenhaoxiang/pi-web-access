@@ -16,7 +16,9 @@ test("packed installs keep typebox as a peer dependency (hosted by pi at runtime
 			encoding: "utf8",
 			stdio: ["ignore", "pipe", "pipe"],
 		});
-		const [{ filename, files }] = JSON.parse(packOutput);
+		const parsedPack = JSON.parse(packOutput);
+		const pack = Array.isArray(parsedPack) ? parsedPack[0] : parsedPack["pi-web-access"] ?? Object.values(parsedPack)[0];
+		const { filename, files } = pack;
 		const packedFiles = files.map((file) => file.path);
 		assert.ok(packedFiles.includes("index.ts"));
 		assert.ok(packedFiles.includes("CHANGELOG.md"));

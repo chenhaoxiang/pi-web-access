@@ -84,6 +84,10 @@ export interface WebSearchConfig {
 	cloroApiKey?: unknown;
 	cloroBaseUrl?: unknown;
 	cloroMode?: unknown;
+	automApiKey?: unknown;
+	automBaseUrl?: unknown;
+	specstreamApiKey?: unknown;
+	specstreamBaseUrl?: unknown;
 	tabstackBaseUrl?: unknown;
 	tabstackApiKey?: unknown;
 	tabstackResearchMode?: unknown;

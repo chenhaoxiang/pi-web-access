@@ -3,7 +3,7 @@ doc_type: runbook
 project: workspace
 component: pi-web-access
 product_line: shared
-release: 0.47.0-fork.2
+release: 0.48.0-fork.1
 status: active
 truth_mode: maintained
 created: 2026-10-15
@@ -16,7 +16,7 @@ owner: chx
 
 ## Scope and source
 
-The maintained repository is `chenhaoxiang/pi-web-access`; community source remains `nicobailon/pi-web-access`. The current source candidate is **0.47.0-fork.2**, based on community main version **0.47.0**, exact commit `6dd57b7f5a0c3041053e65a28f5f425323ec95f9`. Previous **0.47.0-fork.1** remains available for rollback. The initial **0.40.0-fork.1** baseline was community v0.40.0 at `9861ad72a11c9af419b39f9b00860708407f7025`. The package keeps the community license and author attribution. GitHub Release distribution is separate from npm: never publish under the original author's npm identity.
+The maintained repository is `chenhaoxiang/pi-web-access`; community source remains `nicobailon/pi-web-access`. The source candidate **0.48.0-fork.1** integrates the published community tag **v0.48.0** at `896d75bec55e316726db287a870eb166c4e3f40c`. Subsequent community commits are mirror-only. The previous maintenance release **0.47.0-fork.2** remains available. The initial **0.40.0-fork.1** baseline was community v0.40.0 at `9861ad72a11c9af419b39f9b00860708407f7025`. The package keeps the community license and author attribution. GitHub Release distribution is separate from npm: never publish under the original author's npm identity.
 
 The local trial history is in [search routing diagnostics](search-routing-diagnostics.md). Its 0.40.0-local.1 checks and stopped review are historical evidence, not approval or release evidence for a later fork commit.
 
@@ -30,7 +30,7 @@ The local trial history is in [search routing diagnostics](search-routing-diagno
 
 ## Community main follow-up (0.47.0-fork.2 candidate)
 
-Integrate the four commits after `322e44fafc1aaa691779cdf2116584e67edd7645` through the exact tip above; community package version remains `0.47.0`. AnySearch applies local domain filters and caps requests at 10 results. cloro is paid and explicit-only, excluded from auto/all. DuckDuckGo spaces and budgets starts per process and shares bot-check cooldown (not the start budget) through a best-effort file beside `web-search.json`. Explicit fetch answer mode can send images/frames to the selected image-capable answer model; text-only models fail before authentication/completion, without a fallback model.
+This historical follow-up integrated the four commits after `322e44fafc1aaa691779cdf2116584e67edd7645` through `6dd57b7f5a0c3041053e65a28f5f425323ec95f9`; community package version remains `0.47.0`. AnySearch applies local domain filters and caps requests at 10 results. cloro is paid and explicit-only, excluded from auto/all. DuckDuckGo spaces and budgets starts per process and shares bot-check cooldown (not the start budget) through a best-effort file beside `web-search.json`. Explicit fetch answer mode can send images/frames to the selected image-capable answer model; text-only models fail before authentication/completion, without a fallback model.
 
 Retain fork routing/Exa diagnostics, private source identity, update anti-overwrite guards, proxy locking, cancellation and credential/hosted-fetch opt-ins. No real settings, installed packages or sessions change. This is source-only maintenance; local validation and exact-head PR CI are recorded with the PR. Fresh independent review, merge, immutable release, installation selection and runtime loading remain separate later gates.
 
