@@ -808,7 +808,12 @@ export function createWebToolCore(host: WebToolCoreHost): WebToolCoreInstance {
 	}
 
 	async function webSearch(params: WebSearchParams, signal?: AbortSignal, call: WebSearchCallOptions = {}): Promise<WebToolResult> {
-		const model = validateSearchModelOverride(params.provider, params.model);
+		// Optional model overrides are commonly materialized as an empty string by
+		// model/tool bridges. Treat blank as omitted; an actual override still goes
+		// through the strict provider/model validation below.
+		const model = typeof params.model === "string"
+			? (params.model.trim() ? validateSearchModelOverride(params.provider, params.model) : undefined)
+			: validateSearchModelOverride(params.provider, params.model);
 		const { extensionContext: ctx, onUpdate } = call;
 		return runWithProxy(typeof params.proxy === "string" ? params.proxy : undefined, async () => {
 			const rawQueryList: unknown[] = Array.isArray(params.queries)

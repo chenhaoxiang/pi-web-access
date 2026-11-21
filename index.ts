@@ -1855,7 +1855,12 @@ export default function (pi: ExtensionAPI) {
 			}
 
 			let statusLine: string;
-			const queryInfo = details?.queryCount === 1 ? "" : `${details?.successfulQueries}/${details?.queryCount} queries, `;
+			const hasQueryProgress = typeof details?.successfulQueries === "number" && typeof details?.queryCount === "number";
+			const queryInfo = details?.queryCount === 1
+				? ""
+				: hasQueryProgress
+					? `${details.successfulQueries}/${details.queryCount} queries, `
+					: "";
 			statusLine = theme.fg("success", `${queryInfo}${details?.totalResults ?? 0} sources`);
 			if (details?.curated && details?.curatedFrom) {
 				statusLine += theme.fg("muted", ` (${details.queryCount}/${details.curatedFrom} queries curated)`);

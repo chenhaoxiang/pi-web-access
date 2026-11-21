@@ -129,6 +129,12 @@ test("non-error result yields null so the caller falls through to the success re
 	assert.equal(buildSearchErrorPlan(null), null);
 });
 
+test("success renderer guards missing query counts instead of showing undefined/undefined", () => {
+	const indexSrc = readFileSync(indexPath, "utf8");
+	assert.match(indexSrc, /const hasQueryProgress = typeof details\?\.successfulQueries === "number" && typeof details\?\.queryCount === "number";/);
+	assert.doesNotMatch(indexSrc, /const queryInfo = details\?\.queryCount === 1 \? "" : `\$\{details\?\.successfulQueries\}\/\$\{details\?\.queryCount\} queries, `;/);
+});
+
 // --- source-contract guard: index.ts web_search renderResult must DELEGATE to
 // buildSearchErrorPlan on the error path (mutation-proof against reverting the
 // integration back to the dead-end single-line return). ---
