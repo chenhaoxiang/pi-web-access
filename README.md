@@ -6,7 +6,7 @@
 
 English | [简体中文](README.zh-CN.md)
 
-This is [`chenhaoxiang/pi-web-access`](https://github.com/chenhaoxiang/pi-web-access), the maintained fork of [`nicobailon/pi-web-access`](https://github.com/nicobailon/pi-web-access). Source candidate **0.48.0-fork.1** integrates the published community v0.48.0 at `896d75bec55e316726db287a870eb166c4e3f40c` and retains the search-routing reliability fixes described below. The candidate is not yet a published release.
+This is [`chenhaoxiang/pi-web-access`](https://github.com/chenhaoxiang/pi-web-access), the maintained fork of [`nicobailon/pi-web-access`](https://github.com/nicobailon/pi-web-access). Release **0.48.0-fork.2** integrates the published community v0.48.0 at `896d75bec55e316726db287a870eb166c4e3f40c` and retains the search-routing reliability fixes described below.
 
 - `main` is our reviewed integration and release branch; `upstream-main` mirrors only community main and is never an installation source.
 - Fork releases use immutable `v<version>-fork.<revision>` tags, installable GitHub Release tarballs, provenance and SHA-256 checksums. No community npm identity is published.
@@ -16,7 +16,7 @@ This is [`chenhaoxiang/pi-web-access`](https://github.com/chenhaoxiang/pi-web-ac
 Once its matching GitHub Release/tag is published, install this fork at the pinned release:
 
 ```bash
-pi install git:github.com/chenhaoxiang/pi-web-access@v0.47.0-fork.1
+pi install git:github.com/chenhaoxiang/pi-web-access@v0.48.0-fork.2
 ```
 
 Use `@main` only when deliberately following our moving maintenance branch. For a checksum-verified compiled install, download the tarball, `release-manifest.json` and `SHA256SUMS` from [our releases](https://github.com/chenhaoxiang/pi-web-access/releases), verify them, install into a permanent versioned directory without peer replacement, and select that package. Keep the old installation and let active sessions finish before reload/restart. See [fork maintenance](docs/maintenance/fork-maintenance.md).

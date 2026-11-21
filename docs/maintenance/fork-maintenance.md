@@ -3,7 +3,7 @@ doc_type: runbook
 project: workspace
 component: pi-web-access
 product_line: shared
-release: 0.48.0-fork.1
+release: 0.48.0-fork.2
 status: active
 truth_mode: maintained
 created: 2026-10-15
@@ -16,7 +16,7 @@ owner: chx
 
 ## Scope and source
 
-The maintained repository is `chenhaoxiang/pi-web-access`; community source remains `nicobailon/pi-web-access`. The source candidate **0.48.0-fork.1** integrates the published community tag **v0.48.0** at `896d75bec55e316726db287a870eb166c4e3f40c`. Subsequent community commits are mirror-only. The previous maintenance release **0.47.0-fork.2** remains available. The initial **0.40.0-fork.1** baseline was community v0.40.0 at `9861ad72a11c9af419b39f9b00860708407f7025`. The package keeps the community license and author attribution. GitHub Release distribution is separate from npm: never publish under the original author's npm identity.
+The maintained repository is `chenhaoxiang/pi-web-access`; community source remains `nicobailon/pi-web-access`. The maintenance release **0.48.0-fork.2** integrates the published community tag **v0.48.0** at `896d75bec55e316726db287a870eb166c4e3f40c`. Subsequent community commits are mirror-only. The previous maintenance release **0.48.0-fork.1** remains available. The initial **0.40.0-fork.1** baseline was community v0.40.0 at `9861ad72a11c9af419b39f9b00860708407f7025`. The package keeps the community license and author attribution. GitHub Release distribution is separate from npm: never publish under the original author's npm identity.
 
 The local trial history is in [search routing diagnostics](search-routing-diagnostics.md). Its 0.40.0-local.1 checks and stopped review are historical evidence, not approval or release evidence for a later fork commit.
 
@@ -96,7 +96,7 @@ The packer creates local files only; it does not push, publish, install, change 
 After the matching GitHub Release/tag has actually been published, the reproducible source install is:
 
 ```bash
-pi install git:github.com/chenhaoxiang/pi-web-access@v0.47.0-fork.1
+pi install git:github.com/chenhaoxiang/pi-web-access@v0.48.0-fork.2
 ```
 
 `@main` is permitted only when deliberately following our moving integration branch. Never install `upstream-main` or the community npm package when fork behavior is required.

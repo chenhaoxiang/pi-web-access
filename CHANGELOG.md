@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.48.0-fork.2] - 2026-11-21
+
+- Treat blank per-call `web_search` model overrides as omitted, including curator validation, preventing optional-field serialization from failing before the configured route runs.
+- Guard the search result renderer against missing query counts so parameter failures no longer display `undefined/undefined queries`.
+- Keep explicit provider/model validation, OpenAI authentication boundaries and the existing Exa → AnySearch route unchanged.
+
 ## [0.47.0-fork.2] - 2026-11-10
 
 - Synchronize four community main commits through `6dd57b7f5a0c3041053e65a28f5f425323ec95f9` (community base remains 0.47.0), retaining fork diagnostics, private identity and update/release safety.

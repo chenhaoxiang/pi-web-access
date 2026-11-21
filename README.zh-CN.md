@@ -4,7 +4,7 @@
 
 - `main`：我们的整合与发布主线
 - `upstream-main`：社区 `main` 的只读镜像，不是安装来源
-- 当前源码候选：`0.48.0-fork.1`；上一可安装维护版为 `0.47.0-fork.2`。
+- 当前维护版：`0.48.0-fork.2`；上一可安装维护版为 `0.48.0-fork.1`。
 - 社区基线：社区稳定版 `0.48.0`，提交 `896d75bec55e316726db287a870eb166c4e3f40c`。
 
 ## 安装
@@ -12,7 +12,7 @@
 对应 GitHub Release/tag 发布完成后，使用固定版本：
 
 ```bash
-pi install git:github.com/chenhaoxiang/pi-web-access@v0.47.0-fork.2
+pi install git:github.com/chenhaoxiang/pi-web-access@v0.48.0-fork.2
 ```
 
 如需跟随维护主线：

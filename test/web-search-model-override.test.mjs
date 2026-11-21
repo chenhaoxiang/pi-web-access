@@ -85,12 +85,22 @@ test("model is rejected before any request without one explicit supported provid
 		for (const provider of [["openai", "xai"], "openai,xai"]) {
 			await assert.rejects(tool.execute("x", { query: "q", model: "m", provider }), /provider lists are ambiguous/);
 		}
-		await assert.rejects(tool.execute("x", { query: "q", provider: "openai", model: "  " }), /non-empty model ID/);
 		const curated = await tool.execute("x", { query: "q", provider: "openai", model: "m", workflow: "summary-review" }, undefined, undefined, {});
 		assert.match(curated.content[0].text, /model cannot be used with workflow "summary-review"/);
 		assert.equal(curated.isError, true);
 	`);
 	assert.deepEqual(requests, []);
+});
+
+test("blank model overrides are treated as omitted and use the configured provider model", () => {
+	const requests = run({ ...keys, ...configured }, `
+		for (const model of ["", "  "]) {
+			const result = await tool.execute("x", { query: "q", provider: "openai", model });
+			assert.notEqual(result.isError, true, result.content[0].text);
+			assert.match(result.content[0].text, /Responses answer/);
+		}
+	`);
+	assert.deepEqual(requests.map(sentModel), ["configured-openai", "configured-openai"]);
 });
 
 test("a Gemini model override fails instead of falling back to browser cookies", () => {
