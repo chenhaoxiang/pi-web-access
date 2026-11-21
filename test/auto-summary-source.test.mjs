@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
-import { resolveWebSearchWorkflow } from "../curator-run.ts";
+import { hasExplicitSearchModelOverride, resolveWebSearchWorkflow } from "../curator-run.ts";
 
 const indexSrc = readFileSync(new URL("../index.ts", import.meta.url), "utf8");
 const coreSrc = readFileSync(new URL("../web-tool-core.ts", import.meta.url), "utf8");
@@ -23,4 +23,11 @@ test("auto-summary skips curator and reuses summary model fallback plumbing", ()
 test("README documents auto-summary", () => {
 	assert.match(readmeSrc, /workflow: "auto-summary"/);
 	assert.match(readmeSrc, /generate a summary without opening the curator/);
+});
+
+test("blank model overrides are omitted for curator validation", () => {
+	assert.equal(hasExplicitSearchModelOverride(undefined), false);
+	assert.equal(hasExplicitSearchModelOverride(""), false);
+	assert.equal(hasExplicitSearchModelOverride("  \t"), false);
+	assert.equal(hasExplicitSearchModelOverride("gpt-6-luna"), true);
 });

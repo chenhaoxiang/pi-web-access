@@ -96,7 +96,7 @@ The packer creates local files only; it does not push, publish, install, change 
 After the matching GitHub Release/tag has actually been published, the reproducible source install is:
 
 ```bash
-pi install git:github.com/chenhaoxiang/pi-web-access@v0.47.0-fork.1
+pi install git:github.com/chenhaoxiang/pi-web-access@v0.48.0-fork.2
 ```
 
 `@main` is permitted only when deliberately following our moving integration branch. Never install `upstream-main` or the community npm package when fork behavior is required.

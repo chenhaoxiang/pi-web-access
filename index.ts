@@ -88,7 +88,7 @@ import { isValyuAvailable } from "./valyu.ts";
 import { isXcrawlAvailable } from "./xcrawl.ts";
 import { buildSearchErrorPlan, type SearchErrorDetails, type SearchErrorPlan } from "./render-search-error.ts";
 import { findModelWithProviderRouting, isModelInScope, resolveHelperModelSelector } from "./summary-model-scope.ts";
-import { registerCuratorRunLifecycle, resolveWebSearchWorkflow, type WebSearchWorkflow } from "./curator-run.ts";
+import { hasExplicitSearchModelOverride, registerCuratorRunLifecycle, resolveWebSearchWorkflow, type WebSearchWorkflow } from "./curator-run.ts";
 import { registerWebToolActivation } from "./tool-activation.ts";
 import { showUpgradeNotice } from "./upgrade-notice.ts";
 import {
@@ -1495,7 +1495,7 @@ export default function (pi: ExtensionAPI) {
 					};
 				}
 
-				if (shouldCurate && params.model !== undefined) {
+				if (shouldCurate && hasExplicitSearchModelOverride(params.model)) {
 					return {
 						content: [{ type: "text", text: "Error: model cannot be used with workflow \"summary-review\". Pass workflow \"none\" or \"auto-summary\" to search with a specific model." }],
 						details: { error: "model is not supported with summary-review" },

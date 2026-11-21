@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ## [0.48.0-fork.2] - 2026-11-21
 
-- Treat blank per-call `web_search` model overrides as omitted, preventing optional-field serialization from failing before the configured Exa/AnySearch route runs.
+- Treat blank per-call `web_search` model overrides as omitted, including curator validation, preventing optional-field serialization from failing before the configured route runs.
 - Guard the search result renderer against missing query counts so parameter failures no longer display `undefined/undefined queries`.
 - Keep explicit provider/model validation, OpenAI authentication boundaries and the existing Exa → AnySearch route unchanged.
 

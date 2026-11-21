@@ -2,6 +2,10 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 export type WebSearchWorkflow = "none" | "summary-review" | "auto-summary";
 
+export function hasExplicitSearchModelOverride(value: unknown): boolean {
+	return value !== undefined && (typeof value !== "string" || value.trim().length > 0);
+}
+
 export function resolveWebSearchWorkflow(input: unknown, hasUI: boolean): WebSearchWorkflow {
 	const normalized = typeof input === "string" ? input.trim().toLowerCase() : "";
 	if (normalized === "auto-summary") return "auto-summary";
