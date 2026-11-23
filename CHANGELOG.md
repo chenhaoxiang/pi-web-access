@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.48.0-fork.3] - 2026-11-23
+
+- Selectively integrate community search/fetch reliability fixes while retaining fork routing diagnostics, Exa → AnySearch fallback, proxy/SSRF/privacy boundaries and private Release/install safeguards.
+- Keep answer-mode usage, blank-model handling, multi-entry retrieval, proxy default-port handling and Chrome cookie path compatibility.
+- Do not adopt the upstream package identity, reseller-provider removal, or upstream release automation.
+
 ## [0.48.0-fork.2] - 2026-11-21
 
 - Treat blank per-call `web_search` model overrides as omitted, including curator validation, preventing optional-field serialization from failing before the configured route runs.
