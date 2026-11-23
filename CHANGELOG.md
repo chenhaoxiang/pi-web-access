@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.48.0-fork.3] - 2026-11-23
+
+- Selectively integrate community search/fetch reliability fixes while retaining fork routing diagnostics, Exa → AnySearch fallback, proxy/SSRF/privacy boundaries and private Release/install safeguards.
+- Keep answer-mode usage, blank-model handling, multi-entry retrieval, proxy default-port handling and Chrome cookie path compatibility.
+- Do not adopt the upstream package identity, reseller-provider removal, or upstream release automation.
+
 ## [0.48.0-fork.2] - 2026-11-21
 
 - Treat blank per-call `web_search` model overrides as omitted, including curator validation, preventing optional-field serialization from failing before the configured route runs.
@@ -20,6 +26,24 @@ All notable changes to this project will be documented in this file.
 - Add explicit-only Sofya/Outcrawl, proxy-lock enforcement and longer GitHub README extraction without changing existing routing or opt-ins.
 
 ## [Unreleased]
+
+### Added
+
+- `web_search` accepts an optional `objective`, the goal the search serves (up to 4,096 characters). Exa API searches use it to rank results, and Parallel searches (`parallel`, `parallel-mcp`) send it as Parallel's objective with the query as the keywords; before, Parallel got the query in both fields, which Parallel's docs list as a common mistake. Keyless Exa and other providers ignore it. Thanks to [@ccc592](https://github.com/ccc592) for #688 and [@SamuelZ12](https://github.com/SamuelZ12) for [issue #701](https://github.com/nicobailon/pi-web-access/issues/701).
+- The README's Proxy section now says how other extensions can recognize this extension's `globalThis.fetch` proxy wrapper: `__piWebAccessSharedProxyFetch === true`, stable since 0.46.0. The older `__piWebAccessProxyFetch` marker stays limited to wrapping a pre-0.46 copy, because setting it on every wrapper would let such a copy skip its own wrapper and bypass the proxy. Thanks to [@wesperz](https://github.com/wesperz) for [issue #682](https://github.com/nicobailon/pi-web-access/issues/682) and [@mystery4f](https://github.com/mystery4f) for the reproduction.
+
+### Changed
+
+- A `fetch_content` call with invalid arguments now reports every problem in one error, a missing URL first, and names the parameters it received. A model that dropped `url` from its call can see that and fix it, instead of repeating the same failing call. Thanks to [@j-koester](https://github.com/j-koester) for [PR #685](https://github.com/nicobailon/pi-web-access/pull/685) and [@anibalsanchez](https://github.com/anibalsanchez) for the report in [PR #686](https://github.com/nicobailon/pi-web-access/pull/686).
+
+### Fixed
+
+- Keyless Parallel (`parallel-mcp`) search results no longer crowd out the rest of a `web_search` call. Each result's excerpts went into the answer uncut, about 13K to 15K characters per query, so a call with several queries or providers hit the 30,000-character inline limit and later queries never appeared. The answer now keeps 500 characters per result, as keyless Exa and Keenable do; `includeContent` still returns the full excerpts. Thanks to [@SamuelZ12](https://github.com/SamuelZ12) for [issue #696](https://github.com/nicobailon/pi-web-access/issues/696).
+- Gemini Web and `authFetch` browser-cookie lookup now finds Chrome profiles on macOS and Linux whose cookie database has moved to `<profile>/Network/Cookies`. Chrome on macOS moves it there and deletes the old `Cookies` file, so those profiles were reported as having no cookie database. A profile that still has the old `Cookies` file keeps reading it, since a half-finished move leaves an incomplete copy in `Network/`. Thanks to [@Dartsac](https://github.com/Dartsac) for [issue #683](https://github.com/nicobailon/pi-web-access/issues/683) and [PR #684](https://github.com/nicobailon/pi-web-access/pull/684).
+- An HTTP(S) `proxy` on its scheme's default port (`http://host`, `http://host:80`, `https://host`) now connects on port 80 or 443. Before, the normalized URL dropped the port and curl connected to port 1080. Thanks to [@jp39](https://github.com/jp39) for [PR #689](https://github.com/nicobailon/pi-web-access/pull/689).
+- `get_search_content` no longer fails when a `web_search` with several queries or a `fetch_content` with several URLs is read without `queryIndex` or `urlIndex`. With `findText` it now searches every stored query or page and labels each match with the index to use; without it, it lists them with their sizes. A search with a single query is now read without `queryIndex`, as a single fetched URL already was. Thanks to [@ohlulu](https://github.com/ohlulu) for [#687](https://github.com/nicobailon/pi-web-access/issues/687).
+- `fetch_content` in answer mode now reports the tokens and cost of its model calls, one per page, so they count in Pi's footer, `/session` and RPC session totals. Before, those calls, each sending up to 60% of the answer model's context window, were left out. Thanks to [@zolped](https://github.com/zolped) for [issue #694](https://github.com/nicobailon/pi-web-access/issues/694) and [PR #695](https://github.com/nicobailon/pi-web-access/pull/695).
+- A `web_search` call with an empty `model` now searches as if `model` were left out. Agents often fill optional fields with `""`, and that failed every search with "model must be a non-empty model ID", even for providers that take no model, such as Brave. Thanks to [@ghita](https://github.com/ghita) for [issue #699](https://github.com/nicobailon/pi-web-access/issues/699).
 
 ## [0.48.0] - 2026-11-12
 

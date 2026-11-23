@@ -5,11 +5,12 @@
 // WebToolCoreHost hook. This module must stay free of runtime imports from
 // index.ts, curator/summary/activation modules, and @earendil-works/* packages.
 import { existsSync, readFileSync } from "node:fs";
+import type { Usage } from "@earendil-works/pi-ai/compat";
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import type { KeyId } from "@earendil-works/pi-tui";
 import pLimit from "p-limit";
 import type { ExtractedContent, ExtractOptions } from "./extract.ts";
-import { normalizeFetchContentParams, type FetchContentParams } from "./fetch-params.ts";
+import { describeReceivedParams, normalizeFetchContentParams, type FetchContentParams } from "./fetch-params.ts";
 import { resolveAuthFetchProfile, type AuthFetchProfile } from "./auth-fetch.ts";
 import { findContent, type FindMode } from "./content-find.ts";
 import { extractPageFields, formatPageExtraction, parseExtractFields } from "./field-extract.ts";
@@ -504,6 +505,100 @@ function formatFullResults(queryData: QueryResultData): string {
 	return output;
 }
 
+interface StoredEntry {
+	label: string;
+	content: string | null;
+	error: string | null;
+}
+
+// Last resort for a limit smaller than the fixed wording; budgeting below keeps normal limits clear of it.
+function capText(text: string, maxChars: number): string {
+	if (text.length <= maxChars) return text;
+	const marker = "\n[Output truncated.]";
+	return marker.length >= maxChars ? text.slice(0, maxChars) : text.slice(0, maxChars - marker.length) + marker;
+}
+
+// A responseId with several queries or URLs and no index: list the entries, or run findText over all
+// of them, instead of failing the call (#687). The returned text stays within maxChars.
+function readAllStoredEntries(
+	params: GetSearchContentParams,
+	indexKey: "queryIndex" | "urlIndex",
+	noun: "queries" | "URLs",
+	entries: StoredEntry[],
+	maxChars: number,
+): WebToolResult {
+	const responseId = params.responseId;
+	const title = `${entries.length} stored ${noun}`;
+	if (params.findText === undefined) {
+		const head = `responseId ${formatInputValue(responseId)} holds ${title}. Pass ${indexKey} to read one, or findText to search all of them.`;
+		const lines = entries.map((entry, index) => `${index}: ${entry.label} (${entry.content === null ? `error: ${entry.error}` : `${entry.content.length} chars`})`);
+		const notListed = (shown: number) => `${entries.length - shown} more not listed (${indexKey} ${shown}-${entries.length - 1}).`;
+		let text = [head, ...lines].join("\n");
+		if (text.length > maxChars) {
+			let shown = 0;
+			let length = head.length;
+			while (shown < lines.length && length + 1 + lines[shown].length + 1 + notListed(shown + 1).length <= maxChars) {
+				length += 1 + lines[shown].length;
+				shown++;
+			}
+			text = [head, ...lines.slice(0, shown), notListed(shown)].join("\n");
+		}
+		return {
+			content: [{ type: "text", text: capText(text, maxChars) }],
+			details: { responseId, title, contentLength: entries.reduce((total, entry) => total + (entry.content?.length ?? 0), 0) },
+		};
+	}
+
+	const findMode = params.findMode ?? "case-insensitive";
+	let queries: string[];
+	try {
+		queries = normalizeFindQueries(params.findText);
+	} catch (err) {
+		const error = err instanceof Error ? err.message : String(err);
+		return {
+			content: [{ type: "text", text: `Unable to find ${formatInputValue(params.findText)} in responseId ${formatInputValue(responseId)}: ${error}. Check findText and use a supported findMode.` }],
+			details: { error, responseId },
+		};
+	}
+	const found = entries.map((entry) => entry.content === null ? null : findContent(entry.content, queries, findMode));
+	const sections = found.flatMap((result, index) => result && result.matchCount > 0
+		? [{ index, text: `## ${indexKey} ${index}: ${entries[index].label}\n\n${result.text}`, returnedMatches: result.returnedMatches }]
+		: []);
+	const noMatches = found.flatMap((result, index) => result?.matchCount === 0 ? [index] : []);
+	const failed = entries.flatMap((entry, index) => entry.content === null ? [`${index} (${entry.error})`] : []);
+	const notes: string[] = [];
+	if (noMatches.length > 0) notes.push(`No matches in ${indexKey} ${noMatches.join(", ")}.`);
+	if (failed.length > 0) notes.push(`Not searched (failed): ${indexKey} ${failed.join(", ")}.`);
+	const heading = `findText searched ${title} in responseId ${formatInputValue(responseId)}.`;
+	const omittedNotice = (omitted: number[]) => `Matches in ${indexKey} ${omitted.join(", ")} omitted to stay under ${maxChars} chars; repeat with ${indexKey} to read them.`;
+	const separator = "\n\n";
+	let shown = sections;
+	const omitted: number[] = [];
+	if ([heading, ...sections.map((section) => section.text), ...notes].join(separator).length > maxChars) {
+		// Reserve the notice's longest form, with every section omitted, so any subset still fits.
+		let budget = maxChars - [heading, ...notes, omittedNotice(sections.map((section) => section.index))].join(separator).length;
+		shown = [];
+		for (const section of sections) {
+			if (separator.length + section.text.length <= budget) {
+				shown.push(section);
+				budget -= separator.length + section.text.length;
+			} else omitted.push(section.index);
+		}
+	}
+	const text = [heading, ...shown.map((section) => section.text), ...notes, ...(omitted.length > 0 ? [omittedNotice(omitted)] : [])].join(separator);
+	return {
+		content: [{ type: "text", text: capText(text, maxChars) }],
+		details: {
+			responseId,
+			title,
+			findMode,
+			matchCount: found.reduce((total, result) => total + (result?.matchCount ?? 0), 0),
+			returnedMatches: shown.reduce((total, section) => total + section.returnedMatches, 0),
+			...(failed.length === entries.length ? { error: "Every stored entry failed" } : {}),
+		},
+	};
+}
+
 function boundSearchPresentation(
 	text: string,
 	guidance: string,
@@ -574,7 +669,7 @@ export interface WebToolCoreHost {
 	 * their responseId. When omitted, web_search awaits the same fetch before returning. */
 	startBackgroundFetch?(urls: string[], proxy?: string, provided?: ExtractedContent[]): string | null;
 	/** Answers fetch_content mode "answer"; requires the host's model access. */
-	answerFromPage?(request: PageAnswerRequest, extensionContext: ExtensionContext | undefined, signal?: AbortSignal): Promise<{ text: string }>;
+	answerFromPage?(request: PageAnswerRequest, extensionContext: ExtensionContext | undefined, signal?: AbortSignal): Promise<{ text: string; usage?: Usage }>;
 	/** Extraction options every fetch in this host adds (for example direct-image policy). */
 	extractOptions?: Pick<ExtractOptions, "rejectDirectImages">;
 }
@@ -850,6 +945,7 @@ export function createWebToolCore(host: WebToolCoreHost): WebToolCoreInstance {
 						numResults: params.numResults,
 						recencyFilter,
 						domainFilter: params.domainFilter,
+						objective: params.objective,
 						includeContent: params.includeContent,
 						category: params.category,
 						signal,
@@ -999,7 +1095,14 @@ export function createWebToolCore(host: WebToolCoreHost): WebToolCoreInstance {
 		});
 	}
 
+	// Answer mode's model calls are reported as the result's usage, so Pi counts them in the session's totals.
 	async function fetchContent(params: FetchContentToolParams, signal?: AbortSignal, call: WebToolCallOptions = {}): Promise<WebToolResult> {
+		const answerUsages: Usage[] = [];
+		const result = await fetchPages(params, signal, call, answerUsages);
+		return answerUsages.length > 0 ? { ...result, usage: answerUsages.reduce(combineUsage) } : result;
+	}
+
+	async function fetchPages(params: FetchContentToolParams, signal: AbortSignal | undefined, call: WebToolCallOptions, answerUsages: Usage[]): Promise<WebToolResult> {
 		const { extensionContext: ctx, onUpdate } = call;
 		let normalized: ReturnType<typeof normalizeFetchContentParams>;
 		try {
@@ -1014,36 +1117,43 @@ export function createWebToolCore(host: WebToolCoreHost): WebToolCoreInstance {
 			const error = `Fetch mode "${mode}" is disabled by fetch.allowedModes.`;
 			return { content: [{ type: "text", text: `Error: ${error}` }], details: { error } };
 		}
+		// Aggregate all validation problems instead of failing on the first
+		// one, and check the URL first: a missing URL is the root cause of
+		// most retries, and naming the parameters that actually arrived helps
+		// tell dropped tool-call arguments (provider issue) apart from
+		// malformed ones (caller issue). Parameter-level normalization
+		// problems (mode, redirects, auth, proxy) are collected too, so one
+		// round-trip reports every fixable parameter at once.
+		const problems: string[] = [];
+		if (urlList.length === 0) {
+			problems.push("url" in params || "urls" in params
+				? `No usable URL provided (received parameters: ${describeReceivedParams(params)}). 'url' must be a non-empty string or 'urls' a non-empty array`
+				: `No URL provided (received parameters: ${describeReceivedParams(params)}). Use the 'url' parameter, or 'urls' for parallel fetches`);
+		}
+		problems.push(...normalized.problems);
+		if (mode === "answer" && !options.prompt) problems.push("mode answer requires prompt");
+		if (mode === "raw" && (options.forceClone === true || options.timestamp || options.frames || options.prompt || options.model || options.answerModel)) {
+			problems.push("mode raw cannot be combined with forceClone, prompt, timestamp, frames, model, or answerModel");
+		}
+		if (mode !== "answer" && options.answerModel) problems.push("answerModel requires mode answer");
+		if (mode === "answer" && options.model) problems.push("use answerModel, not model, with mode answer");
+		// Authenticated page text never goes to a hosted model.
+		if ((mode === "answer" || mode === "extract") && options.auth !== undefined) problems.push(`auth cannot be combined with mode ${mode}`);
+		if (mode !== "extract" && params.fields !== undefined) problems.push("fields requires mode extract");
+		let extractFields: ReturnType<typeof parseExtractFields> | undefined;
+		if (mode === "extract") {
+			try {
+				if (params.fields === undefined) throw new Error("mode extract requires fields");
+				extractFields = parseExtractFields(params.fields);
+			} catch (err) {
+				problems.push(err instanceof Error ? err.message : String(err));
+			}
+		}
+		if (problems.length > 0) {
+			const error = problems.join("; ");
+			return { content: [{ type: "text", text: `Error: ${error}.` }], details: { error, problems } };
+		}
 		return runWithProxy(options.proxy, async () => {
-			if (mode === "answer" && !options.prompt) {
-				return { content: [{ type: "text", text: "Error: mode answer requires prompt." }], details: { error: "mode answer requires prompt" } };
-			}
-			if (mode === "raw" && (options.forceClone === true || options.timestamp || options.frames || options.prompt || options.model || options.answerModel)) {
-				return { content: [{ type: "text", text: "Error: mode raw cannot be combined with forceClone, prompt, timestamp, frames, model, or answerModel." }], details: { error: "Incompatible raw mode options" } };
-			}
-			if (mode !== "answer" && options.answerModel) {
-				return { content: [{ type: "text", text: "Error: answerModel requires mode answer." }], details: { error: "answerModel requires mode answer" } };
-			}
-			if (mode === "answer" && options.model) {
-				return { content: [{ type: "text", text: "Error: use answerModel, not model, with mode answer." }], details: { error: "model is incompatible with mode answer" } };
-			}
-			// Authenticated page text never goes to a hosted model.
-			if ((mode === "answer" || mode === "extract") && options.auth !== undefined) {
-				return { content: [{ type: "text", text: `Error: auth cannot be combined with mode ${mode}.` }], details: { error: `auth cannot be combined with mode ${mode}` } };
-			}
-			if (mode !== "extract" && params.fields !== undefined) {
-				return { content: [{ type: "text", text: "Error: fields requires mode extract." }], details: { error: "fields requires mode extract" } };
-			}
-			let extractFields: ReturnType<typeof parseExtractFields> | undefined;
-			if (mode === "extract") {
-				try {
-					if (params.fields === undefined) throw new Error("mode extract requires fields");
-					extractFields = parseExtractFields(params.fields);
-				} catch (err) {
-					const error = err instanceof Error ? err.message : String(err);
-					return { content: [{ type: "text", text: `Error: ${error}.` }], details: { error } };
-				}
-			}
 			let authFetchProfile: AuthFetchProfile | undefined;
 			if (options.auth !== undefined) {
 				try {
@@ -1052,12 +1162,6 @@ export function createWebToolCore(host: WebToolCoreHost): WebToolCoreInstance {
 					const error = err instanceof Error ? err.message : String(err);
 					return { content: [{ type: "text", text: `Error: ${error}` }], details: { error } };
 				}
-			}
-			if (urlList.length === 0) {
-				return {
-					content: [{ type: "text", text: "Error: No URL provided. Use the 'url' parameter, or 'urls' for parallel fetches." }],
-					details: { error: "No URL provided" },
-				};
 			}
 
 			onUpdate?.({
@@ -1097,6 +1201,7 @@ export function createWebToolCore(host: WebToolCoreHost): WebToolCoreInstance {
 							...(options.answerModel ? { model: options.answerModel } : {}),
 							...(images ? { images } : {}),
 						}, ctx, signal);
+						if (answer.usage) answerUsages.push(answer.usage);
 						if (!images) return { ...result, content: answer.text };
 						// The answer replaces the images; the agent does not also receive them.
 						const { frames: _frames, thumbnail: _thumbnail, ...rest } = result;
@@ -1359,10 +1464,17 @@ export function createWebToolCore(host: WebToolCoreHost): WebToolCoreInstance {
 						details: { error: "Index out of range" },
 					};
 				}
+			} else if (data.queries.length === 1) {
+				queryData = data.queries[0];
+			} else if (data.queries.length > 1) {
+				return readAllStoredEntries(params, "queryIndex", "queries", data.queries.map((q) => ({
+					label: `"${q.query}"`,
+					content: q.error ? null : formatFullResults(q),
+					error: q.error,
+				})), maxInlineContentChars);
 			} else {
-				const available = data.queries.map((q, i) => `${i}: "${q.query}"`).join(", ");
 				return {
-					content: [{ type: "text", text: `Specify query or queryIndex for responseId ${formatInputValue(params.responseId)}. Available queries: ${available || "none"}.` }],
+					content: [{ type: "text", text: `Specify query or queryIndex for responseId ${formatInputValue(params.responseId)}. Available queries: none.` }],
 					details: { error: "No query specified" },
 				};
 			}
@@ -1462,10 +1574,15 @@ export function createWebToolCore(host: WebToolCoreHost): WebToolCoreInstance {
 				// (common with findText on single-URL fetches) succeed without a retry.
 				selectedUrlIndex = 0;
 				urlData = data.urls[0];
+			} else if (data.urls.length > 1) {
+				return readAllStoredEntries(params, "urlIndex", "URLs", data.urls.map((u) => ({
+					label: u.title && u.title !== u.url ? `${u.title} — ${u.url}` : u.url,
+					content: u.error ? null : u.content,
+					error: u.error,
+				})), maxInlineContentChars);
 			} else {
-				const available = data.urls.map((u, i) => `${i}: ${u.url}`).join("\n  ");
 				return {
-					content: [{ type: "text", text: `Specify url or urlIndex for responseId ${formatInputValue(params.responseId)}. Available URLs:\n  ${available || "  none"}` }],
+					content: [{ type: "text", text: `Specify url or urlIndex for responseId ${formatInputValue(params.responseId)}. Available URLs:\n    none` }],
 					details: { error: "No URL specified" },
 				};
 			}
@@ -1566,6 +1683,30 @@ export interface StandaloneWebToolCore extends WebToolCore {
 
 function standaloneError(error: string): WebToolResult {
 	return { content: [{ type: "text", text: `Error: ${error}` }], details: { error }, isError: true };
+}
+
+// A copy of Pi's core/usage-totals.ts combineUsage, which Pi doesn't export, so the totals match Pi's.
+function combineUsage(first: Usage, second: Usage): Usage {
+	return {
+		input: first.input + second.input,
+		output: first.output + second.output,
+		cacheRead: first.cacheRead + second.cacheRead,
+		cacheWrite: first.cacheWrite + second.cacheWrite,
+		...(first.cacheWrite1h !== undefined || second.cacheWrite1h !== undefined
+			? { cacheWrite1h: (first.cacheWrite1h ?? 0) + (second.cacheWrite1h ?? 0) }
+			: {}),
+		...(first.reasoning !== undefined || second.reasoning !== undefined
+			? { reasoning: (first.reasoning ?? 0) + (second.reasoning ?? 0) }
+			: {}),
+		totalTokens: first.totalTokens + second.totalTokens,
+		cost: {
+			input: first.cost.input + second.cost.input,
+			output: first.cost.output + second.cost.output,
+			cacheRead: first.cost.cacheRead + second.cost.cacheRead,
+			cacheWrite: first.cost.cacheWrite + second.cost.cacheWrite,
+			total: first.cost.total + second.cost.total,
+		},
+	};
 }
 
 // Marks a final tool result as failed (`isError: true`) for both the Pi tools

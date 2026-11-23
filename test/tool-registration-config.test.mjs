@@ -75,7 +75,7 @@ test("malformed config falls back during extension registration", () => {
 
 test("default public execution tool definitions retain their compatibility hashes", () => {
 	const expected = {
-		web_search: "b596687b2b7ec2c7e54b7bce3454c15f40f5ec502e9501d00517a2798796c72c",
+		web_search: "7abdcc5697f60daaab03a3a3070d22f8cffe46eb9f9347d22c823f97881494ca",
 		source_check: "9e1c44321d9a277dc31ce6df4ca309b77126ec5dd3c6967b0a03d5cb82be856f",
 		fetch_content: "9891bb53013ef935a9515902c998c1660c580ce0dcdfa7f25404f75b19929547",
 		get_search_content: "0671f28d0815f76acaa0afc5267aac8686ea4eaa46978f35bcd674ee6446f30a",
@@ -146,7 +146,7 @@ test("registered tools do not advertise disabled get_search_content", () => {
 	assert.doesNotMatch(fetchTool.description, /get_search_content/);
 	assert.match(fetchTool.description, /retrieval tool is not registered/);
 	assert.doesNotMatch(registeredTool({ tools: { getSearchContent: { enabled: false } } }, "web_search").description, /get_search_content/);
-	assert.match(registeredTool({ toolNames: { getSearchContent: "open_content" } }, "web_search").description, /retrieval with open_content /);
+	assert.match(registeredTool({ toolNames: { getSearchContent: "open_content" } }, "web_search").description, /stored for open_content /);
 });
 
 test("web activity shortcut renders through the supported string-array API", async () => {

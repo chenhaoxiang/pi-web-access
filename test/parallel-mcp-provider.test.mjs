@@ -38,7 +38,7 @@ test("Parallel MCP searches anonymously, maps filters, and supports explicit rou
 		const { searchWithParallelMcp } = await import(${JSON.stringify(moduleUrl)});
 		const direct = await searchWithParallelMcp("docs", { numResults: 2, domainFilter: ["example.com", "-private.docs.example.com"], recencyFilter: "week", includeContent: true });
 		const { search } = await import(${JSON.stringify(searchModuleUrl)});
-		const routed = await search("route", { provider: "auto" });
+		const routed = await search("route", { provider: "auto", objective: " Official docs for the route API " });
 		console.log(JSON.stringify({ calls, direct, routedProvider: routed.provider }));
 	`, { PI_CODING_AGENT_DIR: home });
 	assert.equal(child.status, 0, child.stderr);
@@ -50,6 +50,9 @@ test("Parallel MCP searches anonymously, maps filters, and supports explicit rou
 	assert.match(output.calls[0].body.params.arguments.search_queries[0], /site:example\.com/);
 	assert.match(output.calls[0].body.params.arguments.search_queries[0], /-site:private\.docs\.example\.com/);
 	assert.match(output.calls[0].body.params.arguments.search_queries[0], /past week/);
+	assert.equal(output.calls[0].body.params.arguments.objective, "docs");
+	assert.equal(output.calls[1].body.params.arguments.objective, "Official docs for the route API");
+	assert.deepEqual(output.calls[1].body.params.arguments.search_queries, ["route"]);
 	assert.deepEqual(output.direct.results.map(result => result.url), ["https://docs.example.com/a"]);
 	assert.equal(output.direct.inlineContent[0].content, "Allowed excerpt");
 	assert.equal(output.routedProvider, "parallel-mcp");
@@ -65,6 +68,22 @@ test("Parallel MCP maps text-block search results", async () => {
 	assert.equal(child.status, 0, child.stderr);
 	const output = JSON.parse(child.stdout.trim());
 	assert.deepEqual(output.results, [{ title: "Text result", url: "https://example.com/text", snippet: "Result from a text block" }]);
+});
+
+test("Parallel MCP keeps 500 characters per result in the answer and the full excerpts in inline content", async () => {
+	const home = await createHome({});
+	const child = runChild(`
+		const long = ["a".repeat(400), "b".repeat(400)];
+		globalThis.fetch = async () => new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: { structuredContent: { results: [
+			{ title: "Long", url: "https://example.com/long", excerpts: long }
+		] } } }), { status: 200 });
+		const { searchWithParallelMcp } = await import(${JSON.stringify(moduleUrl)});
+		console.log(JSON.stringify(await searchWithParallelMcp("long", { includeContent: true })));
+	`, { PI_CODING_AGENT_DIR: home });
+	assert.equal(child.status, 0, child.stderr);
+	const output = JSON.parse(child.stdout.trim());
+	assert.equal(output.answer, `${"a".repeat(400)} ${"b".repeat(99)}\nSource: Long (https://example.com/long)`);
+	assert.equal(output.inlineContent[0].content, `${"a".repeat(400)}\n\n${"b".repeat(400)}`);
 });
 
 test("Parallel MCP sends optional Bearer auth and redacts it from errors", async () => {
