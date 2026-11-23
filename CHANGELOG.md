@@ -35,7 +35,6 @@ All notable changes to this project will be documented in this file.
 - Gemini Web and `authFetch` browser-cookie lookup now finds Chrome profiles on macOS and Linux whose cookie database has moved to `<profile>/Network/Cookies`. Chrome on macOS moves it there and deletes the old `Cookies` file, so those profiles were reported as having no cookie database. A profile that still has the old `Cookies` file keeps reading it, since a half-finished move leaves an incomplete copy in `Network/`. Thanks to [@Dartsac](https://github.com/Dartsac) for [issue #683](https://github.com/nicobailon/pi-web-access/issues/683) and [PR #684](https://github.com/nicobailon/pi-web-access/pull/684).
 - An HTTP(S) `proxy` on its scheme's default port (`http://host`, `http://host:80`, `https://host`) now connects on port 80 or 443. Before, the normalized URL dropped the port and curl connected to port 1080. Thanks to [@jp39](https://github.com/jp39) for [PR #689](https://github.com/nicobailon/pi-web-access/pull/689).
 
->>>>>>> 2f6811e (feat(exa): pass a search objective to Exa (#688))
 ## [0.48.0] - 2026-11-12
 
 ### Highlights
