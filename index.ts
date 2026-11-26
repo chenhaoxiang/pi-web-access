@@ -1,14 +1,15 @@
 import type { AgentToolResult, ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { Box, Text, truncateToWidth, type KeyId } from "@earendil-works/pi-tui";
-import { Type, type TOptional, type TString } from "typebox";
+import { Type, type TOptional, type TString, type TUnsafe } from "typebox";
 import type { ExtractedContent } from "./extract.ts";
 import { normalizeFetchContentParams } from "./fetch-params.ts";
 import { answerFromPage } from "./page-query.ts";
 import { rewriteSearchQuery } from "./query-rewrite.ts";
 import { clearCloneCache, releaseClonesUnusedSince, touchClones } from "./github-extract.ts";
-import { ALL_SEARCH_PROVIDERS, getAllowedSearchProviders, getConfiguredSearchRouting, parseProviderArgument, RESOLVED_SEARCH_PROVIDERS, search, type AttributedSearchResponse, type ProviderAvailability, type SearchProvider, type SearchProviderSelection, type ResolvedSearchProvider } from "./gemini-search.ts";
+import { ALL_SEARCH_PROVIDERS, getAllowedSearchProviders, getAvailableCustomSearchProviders, getConfiguredSearchRouting, parseProviderArgument, RESOLVED_SEARCH_PROVIDERS, search, type AttributedSearchResponse, type BuiltinSearchProvider, type ProviderAvailability, type SearchProvider, type SearchProviderSelection, type ResolvedSearchProvider } from "./gemini-search.ts";
 export type { ProviderAvailability } from "./gemini-search.ts";
 import { formatSeconds, getWebSearchConfigDir, resolveCuratorNetworkConfig, runWithProxy } from "./utils.ts";
+import { getRetrievalOnlyPolicy, RETRIEVAL_ONLY_DESCRIPTION_SUFFIX, retrievalOnlyError } from "./retrieval-only.ts";
 import {
 	deleteHeldResult,
 	generateId,
@@ -38,15 +39,15 @@ import { join } from "node:path";
 import { isPerplexityAvailable } from "./perplexity.ts";
 import { isExaAvailable } from "./exa.ts";
 import { isGeminiApiAvailable } from "./gemini-api.ts";
-import { getActiveGoogleEmail, getGeminiWebAvailabilityDiagnostic, getGeminiWebAvailabilityDiagnosticDetails, isGeminiWebAvailable } from "./gemini-web.ts";
-import { isBrowserCookieAccessAllowed } from "./gemini-web-config.ts";
+import { browserCookieAccessHint, getActiveGoogleEmail, getGeminiWebAvailabilityDiagnostic, getGeminiWebAvailabilityDiagnosticDetails, isGeminiWebAvailable } from "./gemini-web.ts";
+import { clearGeminiWebConfigCache, getBrowserCookieSelectionFromConfig, grantBrowserCookieAccessForSession, isBrowserCookieAccessAllowed, revokeBrowserCookieAccessForSession, type BrowserCookieConsent } from "./gemini-web-config.ts";
+import { detectBrowserProfiles } from "./chrome-cookies.ts";
 import { isBraveAvailable } from "./brave.ts";
 import { isCurrentModelHostedSearchEligible, isOpenAISearchAvailable, isOpenAISubscriptionModelSelected } from "./openai-search.ts";
 import { isParallelAvailable } from "./parallel.ts";
 import { isParallelMcpAvailable } from "./parallel-mcp.ts";
 import { parseStringifiedArrays } from "./tool-arguments.ts";
 import { isTinyFishAvailable } from "./tinyfish.ts";
-import { isSearch1APIAvailable } from "./search1api.ts";
 import { isSearchinfinityAvailable } from "./searchinfinity.ts";
 import { isQueritAvailable } from "./querit.ts";
 import { isTavilyAvailable } from "./tavily.ts";
@@ -54,7 +55,6 @@ import { isTabstackAvailable } from "./tabstack.ts";
 import { isYouAvailable } from "./you.ts";
 import { isFirecrawlAvailable } from "./firecrawl.ts";
 import { isJinaSearchAvailable } from "./jina-search.ts";
-import { isSerpdiveAvailable } from "./serpdive.ts";
 import { isKagiAvailable } from "./kagi.ts";
 import { isBochaAvailable } from "./bocha.ts";
 import { isOllamaAvailable } from "./ollama.ts";
@@ -65,27 +65,15 @@ import { isAnySearchAvailable } from "./anysearch.ts";
 import { isXaiSearchAvailable } from "./xai-search.ts";
 import { isMistralAvailable } from "./mistral-search.ts";
 import { isKimiSearchAvailable } from "./kimi-search.ts";
-import { isBrightDataAvailable } from "./brightdata.ts";
-import { isSerpBaseAvailable } from "./serpbase.ts";
-import { isSerpApiAvailable } from "./serpapi.ts";
-import { isSerperAvailable } from "./serper.ts";
-import { isSerplyAvailable } from "./serply.ts";
 import { isKeenableAvailable } from "./keenable.ts";
 import { isCeramicAvailable } from "./ceramic.ts";
 import { isLinkupAvailable } from "./linkup.ts";
 import { isNineRouterAvailable } from "./ninerouter.ts";
 import { isCloudflareSearchAvailable } from "./cloudflare-search.ts";
-import { isSearchApiAvailable } from "./searchapi.ts";
-import { isOutcrawlAvailable } from "./outcrawl.ts";
-import { isSofyaAvailable } from "./sofya.ts";
-import { isCloroAvailable } from "./cloro.ts";
-import { isAutomAvailable } from "./autom.ts";
-import { isSpecStreamAvailable } from "./specstream.ts";
 import { isDeepSeekAvailable } from "./deepseek.ts";
 import { isBaizhiAvailable } from "./baizhi.ts";
 import { isZaiAvailable } from "./zai.ts";
 import { isValyuAvailable } from "./valyu.ts";
-import { isXcrawlAvailable } from "./xcrawl.ts";
 import { buildSearchErrorPlan, type SearchErrorDetails, type SearchErrorPlan } from "./render-search-error.ts";
 import { findModelWithProviderRouting, isModelInScope, resolveHelperModelSelector } from "./summary-model-scope.ts";
 import { hasExplicitSearchModelOverride, registerCuratorRunLifecycle, resolveWebSearchWorkflow, type WebSearchWorkflow } from "./curator-run.ts";
@@ -224,10 +212,10 @@ const DEFAULT_REMOTE_CURATOR_TIMEOUT_SECONDS = 60;
 const MAX_CURATOR_TIMEOUT_SECONDS = 600;
 const MAX_SUMMARY_GENERATION_DEADLINE_MS = 600_000;
 const FETCH_MODE_DESCRIPTIONS: Record<FetchMode, string> = {
-	readable: "extract readable content as markdown",
-	raw: "return the exact textual body using direct HTTP only",
-	answer: "answer a prompt using only fetched content",
-	extract: "read typed values named in fields",
+	readable: "main text as markdown",
+	raw: "exact text body, direct HTTP only; no video or clone options",
+	answer: "answer a prompt from fetched content only; no auth",
+	extract: "read typed values named in fields; no auth",
 };
 
 // Keep primary query indexes stable for curator slots, then interleave additional
@@ -237,7 +225,8 @@ function curatorResultIndex(queryIndex: number, entryIndex: number, queryCount: 
 }
 
 function curatorResultIndexCapacity(queryCount: number): number {
-	return queryCount * RESOLVED_SEARCH_PROVIDERS.length;
+	// Custom providers in a provider list add entries beyond the built-in count.
+	return queryCount * Math.max(RESOLVED_SEARCH_PROVIDERS.length, getAllowedSearchProviders().length);
 }
 
 function isCommandEnabled(config: WebSearchConfig, name: "websearch" | "curator" | "search" | "google-account"): boolean {
@@ -347,7 +336,6 @@ async function getProviderAvailability(ctx: ExtensionContext): Promise<ProviderA
 		parallel: allowedProviders.has("parallel") && isParallelAvailable(),
 		"parallel-mcp": allowedProviders.has("parallel-mcp") && isParallelMcpAvailable(),
 		tinyfish: allowedProviders.has("tinyfish") && isTinyFishAvailable(),
-		search1api: allowedProviders.has("search1api") && isSearch1APIAvailable(),
 		searchinfinity: allowedProviders.has("searchinfinity") && isSearchinfinityAvailable(),
 		querit: allowedProviders.has("querit") && isQueritAvailable(),
 		tavily: allowedProviders.has("tavily") && isTavilyAvailable(),
@@ -355,7 +343,6 @@ async function getProviderAvailability(ctx: ExtensionContext): Promise<ProviderA
 		you: allowedProviders.has("you") && isYouAvailable(),
 		firecrawl: allowedProviders.has("firecrawl") && isFirecrawlAvailable(),
 		jina: allowedProviders.has("jina") && isJinaSearchAvailable(),
-		serpdive: allowedProviders.has("serpdive") && isSerpdiveAvailable(),
 		kagi: allowedProviders.has("kagi") && isKagiAvailable(),
 		bocha: allowedProviders.has("bocha") && isBochaAvailable(),
 		ollama: allowedProviders.has("ollama") && isOllamaAvailable(),
@@ -367,14 +354,8 @@ async function getProviderAvailability(ctx: ExtensionContext): Promise<ProviderA
 		gemini: geminiApiAvail || !!geminiWebAvail,
 		kimi: allowedProviders.has("kimi") && await isKimiSearchAvailable(ctx),
 		anysearch: allowedProviders.has("anysearch") && isAnySearchAvailable(),
-		xcrawl: allowedProviders.has("xcrawl") && isXcrawlAvailable(),
 		xai: allowedProviders.has("xai") && await isXaiSearchAvailable(ctx),
 		mistral: allowedProviders.has("mistral") && isMistralAvailable(),
-		brightdata: allowedProviders.has("brightdata") && isBrightDataAvailable(),
-		serpbase: allowedProviders.has("serpbase") && isSerpBaseAvailable(),
-		serpapi: allowedProviders.has("serpapi") && isSerpApiAvailable(),
-		serper: allowedProviders.has("serper") && isSerperAvailable(),
-		serply: allowedProviders.has("serply") && isSerplyAvailable(),
 		baizhi: allowedProviders.has("baizhi") && isBaizhiAvailable(),
 		zai: allowedProviders.has("zai") && isZaiAvailable(),
 		valyu: allowedProviders.has("valyu") && isValyuAvailable(),
@@ -383,16 +364,11 @@ async function getProviderAvailability(ctx: ExtensionContext): Promise<ProviderA
 		linkup: allowedProviders.has("linkup") && isLinkupAvailable(),
 		ninerouter: allowedProviders.has("ninerouter") && isNineRouterAvailable(),
 		cloudflare: allowedProviders.has("cloudflare") && isCloudflareSearchAvailable(),
-		searchapi: allowedProviders.has("searchapi") && isSearchApiAvailable(),
-		outcrawl: allowedProviders.has("outcrawl") && isOutcrawlAvailable(),
-		sofya: allowedProviders.has("sofya") && isSofyaAvailable(),
-		cloro: allowedProviders.has("cloro") && isCloroAvailable(),
-		autom: allowedProviders.has("autom") && isAutomAvailable(),
-		specstream: allowedProviders.has("specstream") && isSpecStreamAvailable(),
 		deepseek: allowedProviders.has("deepseek") && isDeepSeekAvailable(),
 	};
 	return {
 		all: ALL_SEARCH_PROVIDERS.some(provider => provider === "gemini" ? geminiApiAvail : providers[provider]),
+		customProviders: getAvailableCustomSearchProviders(),
 		...providers,
 	};
 }
@@ -464,7 +440,7 @@ function resolveProvider(
 		if (routing) {
 			for (const candidate of routing.providers) {
 				if (candidate === "openai" && routing.useCurrentModel === true && !isCurrentModelHostedSearchEligible(ctx)) continue;
-				if (available[candidate]) return candidate;
+				if (available[candidate as BuiltinSearchProvider] || available.customProviders?.includes(candidate)) return candidate;
 			}
 			return routing.providers.find(candidate => candidate !== "openai" || routing.useCurrentModel !== true || isCurrentModelHostedSearchEligible(ctx)) ?? routing.providers[0];
 		}
@@ -473,7 +449,7 @@ function resolveProvider(
 	if (provider === "all") {
 		return available.all ? "all" : firstAvailableProvider(available, preferOpenAI, "exa");
 	}
-	if (ALL_SEARCH_PROVIDERS.includes(provider) && !available[provider]) {
+	if (ALL_SEARCH_PROVIDERS.includes(provider as BuiltinSearchProvider) && !available[provider as BuiltinSearchProvider]) {
 		return firstAvailableProvider(available, provider === "openai" ? false : preferOpenAI, provider);
 	}
 	return provider;
@@ -768,6 +744,12 @@ function refreshUi(ctx: ExtensionContext): void {
 
 export default function (pi: ExtensionAPI) {
 	const initConfig = loadConfigForExtensionInit();
+	// Fixes the process-wide policy, so definitions and every later check agree. Outside
+	// loadConfigForExtensionInit, which logs config errors instead of throwing: a bad policy value
+	// must stop the extension. An unparseable config leaves {} here (env only); every model route
+	// re-reads that config and fails while it stays broken, and a fixed config applies on restart.
+	const retrievalOnly = getRetrievalOnlyPolicy(initConfig);
+	const retrievalOnlySuffix = retrievalOnly.enabled ? RETRIEVAL_ONLY_DESCRIPTION_SUFFIX : "";
 	const fetchModeConfig = resolveFetchModeConfig(initConfig);
 	const toolActivation = initConfig.toolActivation ?? "auto";
 	if (toolActivation !== "auto" && toolActivation !== "dynamic" && toolActivation !== "eager" && toolActivation !== "none") {
@@ -784,7 +766,7 @@ export default function (pi: ExtensionAPI) {
 		throw new Error(`toolActivation "none" in ${WEB_SEARCH_CONFIG_PATH} requires toolExposure "deferred"`);
 	}
 	const allowedSearchProviders = initConfig.webSearch?.allowedProviders === undefined ? RESOLVED_SEARCH_PROVIDERS : getAllowedSearchProviders();
-	const modelProviders = allowedSearchProviders.filter(provider => provider === "openai" || provider === "xai" || provider === "mistral" || provider === "gemini");
+	const modelProviders = retrievalOnly.enabled ? [] : allowedSearchProviders.filter(provider => provider === "openai" || provider === "xai" || provider === "mistral" || provider === "gemini");
 	// Depends on config only, never on credentials, so definitions stay byte-stable across environments.
 	const providerDescription = `auto, all, a name, or comma-separated names; omit for the configured default.${initConfig.webSearch?.allowedProviders === undefined ? "" : ` Allowed: ${allowedSearchProviders.join(", ")}.`}`;
 	const curatorRunState = registerCuratorRunLifecycle(pi);
@@ -882,9 +864,10 @@ export default function (pi: ExtensionAPI) {
 				} satisfies FetchedContentData;
 				publish(storeFetchedContentResult(fetchId, data));
 				const ok = fetched.filter(f => !f.error).length;
-				const availability = ok === fetched.length
+				const availabilityStatus = ok === fetched.length ? "full" : ok > 0 ? "partial" : "none";
+				const availability = availabilityStatus === "full"
 					? "Full page content now available."
-					: ok > 0
+					: availabilityStatus === "partial"
 						? "Partial page content now available."
 						: "No page content was fetched. Stored fetch diagnostics are available.";
 				pi.sendMessage(
@@ -892,6 +875,12 @@ export default function (pi: ExtensionAPI) {
 						customType: "web-search-content-ready",
 						content: `Content fetched for ${ok}/${fetched.length} URLs [${fetchId}]. ${availability}`,
 						display: true,
+						details: {
+							fetchId,
+							successfulUrls: ok,
+							totalUrls: fetched.length,
+							availability: availabilityStatus,
+						},
 					},
 					{ triggerTurn: true },
 				);
@@ -999,6 +988,7 @@ export default function (pi: ExtensionAPI) {
 		modelOverride?: string,
 		feedback?: string,
 	): Promise<{ summary: string; meta: SummaryMeta }> {
+		if (retrievalOnly.enabled) throw retrievalOnlyError("Summary generation", retrievalOnly);
 		const selectedResults: QueryResultData[] = [];
 		for (const qi of selectedQueryIndices) {
 			const result = resultsByIndex.get(qi);
@@ -1037,6 +1027,7 @@ export default function (pi: ExtensionAPI) {
 	async function loadSummaryModelChoices(
 		summaryContext: SummaryGenerationContext,
 	): Promise<{ summaryModels: Array<{ value: string; label: string }>; defaultSummaryModel: string | null; preferredFallback: boolean }> {
+		if (retrievalOnly.enabled) return { summaryModels: [], defaultSummaryModel: null, preferredFallback: false };
 		const summaryModels: Array<{ value: string; label: string }> = [];
 		const seen = new Set<string>();
 		const availableValues = new Set<string>();
@@ -1445,7 +1436,7 @@ export default function (pi: ExtensionAPI) {
 		label: "Web Search",
 		prepareArguments: (args) => parseStringifiedArrays(args, ["queries", "domainFilter"]) as never,
 		description:
-			`Search the web for sources or answers.${getSearchContentEnabled ? ` Full results are stored for ${toolNames.getSearchContent} by responseId.` : ""} Prefer 2-4 varied queries.`,
+			`Search the web for sources or answers.${getSearchContentEnabled ? ` Full results are stored for ${toolNames.getSearchContent} by responseId.` : ""} Prefer 2-4 varied queries.${retrievalOnlySuffix}`,
 		promptSnippet:
 			"Web research. Prefer {queries:[...]} with 2-4 varied angles; omit provider unless overriding the default.",
 		parameters: Type.Object({
@@ -1459,11 +1450,14 @@ export default function (pi: ExtensionAPI) {
 			category: Type.Optional(Type.String({ description: "Exa only, e.g. news" })),
 			...(modelProviders.length > 0 ? { model: Type.Optional(Type.String({ description: `Model ID; needs provider ${modelProviders.join(", ")}` })) } : {}) as { model: TOptional<TString> },
 			provider: Type.Optional(Type.String({ description: providerDescription })),
-			workflow: Type.Optional(
-				StringEnum(["none", "summary-review", "auto-summary"], {
-					description: "Default none; summary-review opens the curator",
-				}),
-			),
+			// Both non-default workflows write a summary with a model, so the policy leaves nothing to choose.
+			...(retrievalOnly.enabled ? {} : {
+				workflow: Type.Optional(
+					StringEnum(["none", "summary-review", "auto-summary"], {
+						description: "Default none; summary-review opens the curator",
+					}),
+				),
+			}) as { workflow: TOptional<TUnsafe<"none" | "summary-review" | "auto-summary">> },
 			proxy: Type.Optional(Type.String({ description: "Proxy URL; omit by default; \"\" forces direct" })),
 		}),
 		outputSchema: webSearchOutputSchema,
@@ -1477,7 +1471,14 @@ export default function (pi: ExtensionAPI) {
 					? params.queries
 					: (params.query !== undefined ? expandQueryString(params.query) : []);
 				const queryList = normalizeQueryList(rawQueryList);
-				const configWorkflow = loadConfigForExtensionInit().workflow;
+				// A saved default only adds a summary on top of the search, so the policy drops it; an explicit request is refused.
+				const configWorkflow = retrievalOnly.enabled ? undefined : loadConfigForExtensionInit().workflow;
+				// Checked before resolving, which turns summary-review into none when there is no UI.
+				const requestedWorkflow = typeof params.workflow === "string" ? params.workflow.trim().toLowerCase() : "";
+				if (retrievalOnly.enabled && (requestedWorkflow === "summary-review" || requestedWorkflow === "auto-summary")) {
+					const error = retrievalOnlyError(`Workflow "${requestedWorkflow}"`, retrievalOnly).message;
+					return { content: [{ type: "text", text: `Error: ${error}` }], details: { error } };
+				}
 				const workflow = nested && params.workflow === undefined
 					? "none"
 					: curatorRunState.resolve(params.workflow, configWorkflow, ctx?.hasUI !== false);
@@ -1740,7 +1741,7 @@ export default function (pi: ExtensionAPI) {
 					return { approvedSummary: generated.summary, summaryMeta: generated.meta };
 				};
 			}
-			return core.webSearch(params, signal, { extensionContext: ctx, onUpdate, summarize, awaitContent: nested });
+			return core.webSearch(params, signal, { extensionContext: ctx, onUpdate, summarize, awaitContent: nested, browserCookieConsent: browserCookieConsent(ctx) });
 			}));
 		},
 
@@ -2027,18 +2028,21 @@ export default function (pi: ExtensionAPI) {
 	if (fetchContentEnabled) pi.registerTool({
 		name: toolNames.fetchContent,
 		label: "Fetch Content",
-		description: `Fetch web pages, PDFs, GitHub repos, images, YouTube and local video, as the mode allows. ${fetchContentStorageNote}`,
+		description: `Fetch web pages, PDFs, GitHub repos, images, YouTube and local video, as the mode allows. ${fetchContentStorageNote}${retrievalOnlySuffix}`,
 		promptSnippet:
 			`Use to fetch URL content, direct images, GitHub repos, and videos.${fetchModeConfig.allowedModes.includes("extract") ? ' For specific values (a price, version, date or limit), use mode "extract" with fields instead of reading the whole page.' : ""}`,
 		parameters: Type.Object({
 			url: Type.Optional(Type.String()),
 			urls: Type.Optional(Type.Array(Type.String())),
 			forceClone: Type.Optional(Type.Boolean({ description: "Clone GitHub repos over the size limit" })),
-			prompt: Type.Optional(Type.String({
-				description: fetchModeConfig.allowedModes.includes("answer")
-					? "Question for video analysis or answer mode"
-					: "Question for video analysis",
-			})),
+			// prompt and model only steer model routes (answer mode, video analysis), which the policy closes.
+			...(retrievalOnly.enabled ? {} : {
+				prompt: Type.Optional(Type.String({
+					description: fetchModeConfig.allowedModes.includes("answer")
+						? "Question for video analysis or answer mode"
+						: "Question for video analysis",
+				})),
+			}) as { prompt: TOptional<TString> },
 			mode: Type.Optional(StringEnum(fetchModeConfig.allowedModes, {
 				description: `${fetchModeDescription}.`,
 			})),
@@ -2060,7 +2064,7 @@ export default function (pi: ExtensionAPI) {
 				maximum: 12,
 				description: "Frames over a range, 5s apart from one time, or over the video",
 			})),
-			model: Type.Optional(Type.String({ description: "Gemini model for video analysis" })),
+			...(retrievalOnly.enabled ? {} : { model: Type.Optional(Type.String({ description: "Gemini model for video analysis" })) }) as { model: TOptional<TString> },
 			auth: Type.Optional(Type.Union([Type.String(), Type.Boolean()], {
 				description: "authFetch profile name, or true for the only one",
 			})),
@@ -2073,7 +2077,7 @@ export default function (pi: ExtensionAPI) {
 		exposure: toolExposure,
 
 		async execute(_toolCallId, params, signal, onUpdate, ctx): Promise<AgentToolResult<Record<string, unknown>>> {
-			return markToolError(await core.fetchContent(params, signal, { extensionContext: ctx, onUpdate }));
+			return markToolError(await core.fetchContent(params, signal, { extensionContext: ctx, onUpdate, browserCookieConsent: browserCookieConsent(ctx) }));
 		},
 
 		renderCall(args, theme) {
@@ -2638,47 +2642,134 @@ export default function (pi: ExtensionAPI) {
 		},
 	});
 
-	if (isCommandEnabled(initConfig, "google-account")) pi.registerCommand("google-account", {
-		description: "Show the active Google account for Gemini Web",
-		handler: async () => {
-			if (!isBrowserCookieAccessAllowed()) {
-				pi.sendMessage({
-					customType: "google-account",
-					content: [{ type: "text", text: `Gemini Web browser cookie access is disabled. Set allowBrowserCookies: true in ${WEB_SEARCH_CONFIG_PATH} to enable it.` }],
-					display: true,
-					details: { available: false, cookieAccessAllowed: false },
-				}, { triggerTurn: true, deliverAs: "followUp" });
+	const googleAccountCommand = isCommandEnabled(initConfig, "google-account") ? "/google-account" : undefined;
+	let browserCookieQuestion: { answer: Promise<boolean>; dismiss: AbortController; waiting: number } | null = null;
+	// After a "No", Gemini-only routes return the setup hint for the rest of the session instead of asking again.
+	let browserCookiesDeclined = false;
+
+	function browserCookieConsent(ctx: ExtensionContext | undefined): BrowserCookieConsent {
+		return {
+			...(googleAccountCommand ? { command: googleAccountCommand } : {}),
+			...(ctx?.hasUI ? { ask: (signal?: AbortSignal) => askForBrowserCookies(ctx, signal) } : {}),
+		};
+	}
+
+	/** Parallel tool calls (several URLs in one fetch_content) share one question. A caller whose signal
+	 * aborts stops waiting with false; the dialog closes once every caller has aborted, and an abort
+	 * is not a "No", so a later call asks again. */
+	function askForBrowserCookies(ctx: ExtensionContext, signal?: AbortSignal): Promise<boolean> {
+		if (browserCookiesDeclined || signal?.aborted) return Promise.resolve(false);
+		if (!browserCookieQuestion) {
+			const dismiss = new AbortController();
+			const question = {
+				dismiss,
+				waiting: 0,
+				answer: chooseBrowserCookieAccess(ctx, "Gemini needs your Google login.", dismiss.signal)
+					.then((granted) => {
+						if (!granted && !dismiss.signal.aborted) browserCookiesDeclined = true;
+						return granted;
+					})
+					.finally(() => { if (browserCookieQuestion === question) browserCookieQuestion = null; }),
+			};
+			browserCookieQuestion = question;
+		}
+		const question = browserCookieQuestion;
+		question.waiting++;
+		return new Promise((resolve, reject) => {
+			const onAbort = () => {
+				if (--question.waiting === 0) {
+					question.dismiss.abort();
+					// A dialog that ignores the abort must not keep later calls from asking.
+					if (browserCookieQuestion === question) browserCookieQuestion = null;
+				}
+				resolve(false);
+			};
+			signal?.addEventListener("abort", onAbort, { once: true });
+			question.answer.then(resolve, reject).finally(() => signal?.removeEventListener("abort", onAbort));
+		});
+	}
+
+	/** Asks which browser's Google login Gemini Web may use, and for how long. True once access is on.
+	 * Detection only checks that profile folders exist; no cookie is read before the user says yes. */
+	async function chooseBrowserCookieAccess(ctx: ExtensionContext, reason: string, signal?: AbortSignal): Promise<boolean> {
+		const found = detectBrowserProfiles();
+		if (found.length === 0) return false;
+		let chosen = found[0];
+		if (found.length > 1) {
+			const labels = found.map(({ name, profiles }) => `${name} (${profiles.join(", ")})`);
+			const index = labels.indexOf(await ctx.ui.select(`${reason} Which browser are you signed into Google in?`, [...labels, "No"], { signal }) ?? "");
+			if (index === -1 || signal?.aborted) return false;
+			chosen = found[index];
+		}
+		const session = "Yes, this session";
+		const always = "Yes, always (saves to web-search.json)";
+		const answer = await ctx.ui.select(`${reason} Read ${chosen.name}'s browser cookies to use it?`, [session, always, "No"], { signal });
+		if (signal?.aborted) return false;
+		// Keep a configured profile when it belongs to the chosen browser, so the same Google account is used.
+		const configured = getBrowserCookieSelectionFromConfig();
+		const selection = { ...(!configured.browser || configured.browser === chosen.browser ? configured : {}), browser: chosen.browser };
+		if (answer === session) {
+			grantBrowserCookieAccessForSession(selection);
+			return true;
+		}
+		if (answer !== always) return false;
+		saveConfig({ allowBrowserCookies: true, browserCookies: selection });
+		clearGeminiWebConfigCache();
+		revokeBrowserCookieAccessForSession();
+		return true;
+	}
+
+	function turnOffBrowserCookies(): string {
+		revokeBrowserCookieAccessForSession();
+		saveConfig({ allowBrowserCookies: false });
+		return isBrowserCookieAccessAllowed()
+			? "Browser cookie access is still on because PI_ALLOW_BROWSER_COOKIES=1 (or FEYNMAN_ALLOW_BROWSER_COOKIES=1) is set in the environment."
+			: "Browser cookie access is off. Gemini Web no longer reads browser cookies.";
+	}
+
+	if (googleAccountCommand) pi.registerCommand("google-account", {
+		description: "Show the active Google account for Gemini Web, or turn its browser cookie access on or off",
+		handler: async (_args, ctx) => {
+			const send = (text: string, details: Record<string, unknown>) => pi.sendMessage({
+				customType: "google-account",
+				content: [{ type: "text", text }],
+				display: true,
+				details,
+			}, { triggerTurn: true, deliverAs: "followUp" });
+
+			const wasAllowed = isBrowserCookieAccessAllowed();
+			if (!wasAllowed && !(ctx.hasUI && await chooseBrowserCookieAccess(ctx, "Gemini Web can use your Google login from a browser."))) {
+				send(`Gemini Web browser cookie access is off.\n${browserCookieAccessHint()}`, { available: false, cookieAccessAllowed: false });
 				return;
 			}
 
+			let text: string;
+			let details: Record<string, unknown>;
 			const cookies = await isGeminiWebAvailable();
 			if (!cookies) {
 				const diagnostic = getGeminiWebAvailabilityDiagnostic();
 				const diagnosticDetails = getGeminiWebAvailabilityDiagnosticDetails();
 				const attempted = formatCookieAttempts(diagnosticDetails?.attempts ?? []);
-				const text = diagnostic
+				text = diagnostic
 					? `Gemini Web is unavailable: ${diagnostic}${attempted ? ` Attempted browser profiles: ${attempted}.` : ""}`
-					: "Gemini Web is unavailable. Sign into gemini.google.com in a supported Chromium-based browser.";
-				pi.sendMessage({
-					customType: "google-account",
-					content: [{ type: "text", text }],
-					display: true,
-					details: { available: false, cookieAccessAllowed: true, diagnostic, cookieDiagnostic: diagnosticDetails },
-				}, { triggerTurn: true, deliverAs: "followUp" });
-				return;
+					: `Gemini Web is unavailable. ${browserCookieAccessHint()}.`;
+				details = { available: false, cookieAccessAllowed: true, diagnostic, cookieDiagnostic: diagnosticDetails };
+			} else {
+				const email = await getActiveGoogleEmail(cookies);
+				text = email
+					? `Active Google account: ${email}`
+					: "Gemini Web is available, but the active Google account could not be determined.";
+				details = { available: true, email: email ?? null };
 			}
 
-			const email = await getActiveGoogleEmail(cookies);
-			const text = email
-				? `Active Google account: ${email}`
-				: "Gemini Web is available, but the active Google account could not be determined.";
-
-			pi.sendMessage({
-				customType: "google-account",
-				content: [{ type: "text", text }],
-				display: true,
-				details: { available: true, email: email ?? null },
-			}, { triggerTurn: true, deliverAs: "followUp" });
+			if (wasAllowed && ctx.hasUI) {
+				const choice = await ctx.ui.select(`${text}\nGemini Web reads your browser cookies.`, ["Keep it on", "Turn it off"]);
+				if (choice === "Turn it off") {
+					text = turnOffBrowserCookies();
+					details = { available: false, cookieAccessAllowed: isBrowserCookieAccessAllowed() };
+				}
+			}
+			send(text, details);
 		},
 	});
 

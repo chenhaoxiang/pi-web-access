@@ -15,6 +15,9 @@ const geminiWebStub = `
 	export const getGeminiWebAvailabilityDiagnostic = () => null;
 	export const getGeminiWebAvailabilityDiagnosticDetails = () => null;
 	export const getActiveGoogleEmail = async () => null;
+	export const browserCookieAccessHint = () => "";
+	export const browserCookieAccessHintLine = () => "";
+	export const requestBrowserCookieAccess = async () => false;
 `;
 const loader = `export async function resolve(s, c, next) {
 	if (s.endsWith("/gemini-web.ts")) return { url: ${JSON.stringify("data:text/javascript," + encodeURIComponent(geminiWebStub))}, shortCircuit: true };
@@ -92,15 +95,14 @@ test("model is rejected before any request without one explicit supported provid
 	assert.deepEqual(requests, []);
 });
 
-test("blank model overrides are treated as omitted and use the configured provider model", () => {
-	const requests = run({ ...keys, ...configured }, `
-		for (const model of ["", "  "]) {
-			const result = await tool.execute("x", { query: "q", provider: "openai", model });
-			assert.notEqual(result.isError, true, result.content[0].text);
-			assert.match(result.content[0].text, /Responses answer/);
-		}
+test("a blank model counts as omitted, for any provider", () => {
+	const requests = run({ ...keys, ...configured, braveApiKey: "brave-key" }, `
+		await tool.execute("a", { query: "q", provider: "brave", model: "" });
+		const result = await tool.execute("b", { query: "q", provider: "openai", model: "  " });
+		assert.notEqual(result.isError, true, result.content[0].text);
 	`);
-	assert.deepEqual(requests.map(sentModel), ["configured-openai", "configured-openai"]);
+	assert.match(requests[0].url, /api\.search\.brave\.com/);
+	assert.equal(requests.at(-1).body.model, "configured-openai");
 });
 
 test("a Gemini model override fails instead of falling back to browser cookies", () => {
