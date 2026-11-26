@@ -6,18 +6,18 @@ import { extractRSCContent } from "./rsc-extract.ts";
 import { extractPDFToMarkdown, isPDF, loadPDFConfig } from "./pdf-extract.ts";
 import { extractGitHub, parseGitHubUrl } from "./github-extract.ts";
 import { extractGitHubIssuePr, parseGitHubIssuePrUrl } from "./github-issue-pr.ts";
-import { isYouTubeURL, isYouTubeEnabled, extractYouTube, extractYouTubeFrame, extractYouTubeFrames, getYouTubeStreamInfo } from "./youtube-extract.ts";
+import { isYouTubeURL, isYouTubeEnabled, extractYouTube, extractYouTubeFrame, extractYouTubeFrames, getYouTubeStreamInfo, youTubeAccessError } from "./youtube-extract.ts";
 import { CredentialResolutionError } from "./credential-source.ts";
 import { extractWithUrlContext, extractWithGeminiWeb } from "./gemini-url-context.ts";
+import { browserCookieAccessHint, browserCookieAccessHintLine } from "./gemini-web.ts";
+import type { BrowserCookieConsent } from "./gemini-web-config.ts";
 import { extractWithParallel, isParallelAvailable } from "./parallel.ts";
 import { extractWithParallelMcp } from "./parallel-mcp.ts";
 import { extractWithTinyFish, isTinyFishAvailable } from "./tinyfish.ts";
 import { extractWithDeepSeek, isDeepSeekAvailable } from "./deepseek.ts";
 import { extractWithExa, hasExaApiKey } from "./exa.ts";
-import { extractWithSearch1API, isSearch1APIAvailable } from "./search1api.ts";
 import { extractWithQuerit, isQueritAvailable } from "./querit.ts";
 import { extractWithTabstack, isTabstackAvailable } from "./tabstack.ts";
-import { extractWithSpecStream, isSpecStreamAvailable } from "./specstream.ts";
 import { extractWithKagi, isKagiExtractAvailable } from "./kagi.ts";
 import { extractWithOllama, isOllamaFetchAvailable } from "./ollama.ts";
 import { extractWithFirecrawl, isFirecrawlAvailable } from "./firecrawl.ts";
@@ -27,6 +27,7 @@ import { isVideoFile, extractVideo, extractVideoFrame, getLocalVideoDuration } f
 import { appendDeclaredWebLinks, discoverDeclaredWebLinks, type DeclaredWebLink } from "./declared-web-links.ts";
 import { fetchRemoteUrl, loadConfiguredFetchContentUserAgent, loadFetchContentCurl, loadFetchContentDomainPolicy, loadFetchContentRedirectPolicy, loadFetchContentUserAgent, loadSsrfConfig, trustedEnvProxyFor, validateRemoteUrl, type DomainPolicy, type Lookup, type RedirectPolicy, type SsrfConfig } from "./ssrf-protection.ts";
 import { createCurlFetch, formatSeconds, getWebSearchConfigPath, type ProxiedRequestInit } from "./utils.ts";
+import { FETCH_PROVIDER_KINDS, getRetrievalOnlyPolicy, retrievalOnlyExhaustedError } from "./retrieval-only.ts";
 import { isImageEnabled } from "./feature-config.ts";
 import { assertAuthFetchUrl, authFetchRedirectGuard, type AuthFetchProfile } from "./auth-fetch.ts";
 import { getBrowserCookiesForHosts, getLastBrowserCookieDiagnostic } from "./chrome-cookies.ts";
@@ -72,11 +73,12 @@ function loadFetchTimeoutMs(): number {
 const NON_RECOVERABLE_ERRORS = ["Unsupported content type", "Response too large", "PDF extraction is disabled", "Image fetching is disabled", "fetchContent.curl command not found"];
 const MIN_USEFUL_CONTENT = 500;
 const SUPPORTED_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
-const FETCH_PROVIDERS = ["http", "firecrawl", "crawl4ai", "jina", "tinyfish", "search1api", "querit", "kagi", "ollama", "parallel", "parallel-mcp", "brightdata", "gemini", "deepseek", "exa", "tabstack", "specstream"] as const;
-type FetchProvider = typeof FETCH_PROVIDERS[number];
+export const FETCH_PROVIDERS = ["http", "firecrawl", "crawl4ai", "jina", "tinyfish", "querit", "kagi", "ollama", "parallel", "parallel-mcp", "brightdata", "gemini", "deepseek", "exa", "tabstack"] as const;
+const REMOVED_FETCH_PROVIDERS = ["search1api", "specstream"];
+export type FetchProvider = typeof FETCH_PROVIDERS[number];
 type FetchRouting = { providers: FetchProvider[]; allowRemoteHostedProviders: boolean };
-const DEFAULT_FETCH_PROVIDER_ORDER: FetchProvider[] = ["http", "firecrawl", "crawl4ai", "jina", "tinyfish", "search1api", "querit", "kagi", "ollama", "parallel", "brightdata", "gemini"];
-const REMOTE_HOSTED_FETCH_PROVIDERS = new Set<FetchProvider>(["jina", "tinyfish", "search1api", "querit", "kagi", "ollama", "parallel", "parallel-mcp", "brightdata", "gemini", "deepseek", "exa", "tabstack", "specstream"]);
+const DEFAULT_FETCH_PROVIDER_ORDER: FetchProvider[] = ["http", "firecrawl", "crawl4ai", "jina", "tinyfish", "querit", "kagi", "ollama", "parallel", "brightdata", "gemini"];
+const REMOTE_HOSTED_FETCH_PROVIDERS = new Set<FetchProvider>(["jina", "tinyfish", "querit", "kagi", "ollama", "parallel", "parallel-mcp", "brightdata", "gemini", "deepseek", "exa", "tabstack"]);
 
 function isDefuddleConsoleError(args: Parameters<typeof console.error>): boolean {
 	const prefix = args[0];
@@ -174,7 +176,7 @@ function redirectPolicyRouteRefusal(url: string, path: string): ExtractedContent
 
 async function resolveAuthCookieHeader(url: string | URL, profile: AuthFetchProfile): Promise<string> {
 	const parsed = assertAuthFetchUrl(profile, url.toString());
-	const result = await getBrowserCookiesForHosts({ hosts: [parsed.hostname], profile: profile.chromeProfile, requestUrl: parsed });
+	const result = await getBrowserCookiesForHosts({ hosts: [parsed.hostname], browser: profile.browser, profile: profile.chromeProfile, requestUrl: parsed });
 	if (result?.cookieHeader) return result.cookieHeader;
 	if (!result) {
 		const diagnostic = getLastBrowserCookieDiagnostic();
@@ -265,6 +267,9 @@ function loadFetchRouting(): FetchRouting {
 		providers = [];
 		for (const provider of providersValue) {
 			const normalized = typeof provider === "string" ? provider.trim().toLowerCase() : "";
+			if (REMOVED_FETCH_PROVIDERS.includes(normalized)) {
+				throw new Error(`fetchRouting.providers in ${WEB_SEARCH_CONFIG_PATH} lists ${normalized}, which was removed as a fetch provider; remove it from fetchRouting.providers`);
+			}
 			if (!FETCH_PROVIDERS.includes(normalized as FetchProvider)) {
 				throw new Error(`fetchRouting.providers in ${WEB_SEARCH_CONFIG_PATH} contains an invalid provider: ${String(provider)}`);
 			}
@@ -389,6 +394,8 @@ export interface ExtractOptions {
 	/** "same-origin" refuses cross-origin redirects and extraction paths whose redirect
 	 * chain cannot be observed. fetchContent.redirects in config is a floor. */
 	redirects?: RedirectPolicy;
+	/** Lets video analysis ask the user to turn on browser cookie access for Gemini Web. */
+	browserCookieConsent?: BrowserCookieConsent;
 }
 
 /** Resolve the direct HTTP/Jina fetch budget, with a per-call override taking precedence. */
@@ -751,7 +758,7 @@ export async function extractContent(
 		try {
 			const result = await extractVideo(localVideo.info, signal, options);
 			if (signal?.aborted) return abortedResult(url);
-			return result ?? { url, title: "", content: "", error: `Video analysis requires Gemini access. Either:\n  1. Sign into gemini.google.com in Chrome (free, uses cookies)\n  2. Set GEMINI_API_KEY in ${WEB_SEARCH_CONFIG_PATH}` };
+			return result ?? { url, title: "", content: "", error: `Video analysis requires Gemini access. Either:\n  1. Set GEMINI_API_KEY in ${WEB_SEARCH_CONFIG_PATH}\n  2. ${browserCookieAccessHint(options?.browserCookieConsent, "     ")}` };
 		} catch (err) {
 			if (isAbortError(err)) return abortedResult(url);
 			return { url, title: "", content: "", error: errorMessage(err) };
@@ -797,7 +804,7 @@ export async function extractContent(
 	}
 	if (ytInfo.isYouTube && youtubeEnabled) {
 		try {
-			const ytResult = await extractYouTube(url, signal, options?.prompt, options?.model);
+			const ytResult = await extractYouTube(url, signal, options?.prompt, options?.model, options?.browserCookieConsent);
 			if (ytResult) return ytResult;
 			if (signal?.aborted) return abortedResult(url);
 		} catch (err) {
@@ -809,7 +816,7 @@ export async function extractContent(
 			url,
 			title: "",
 			content: "",
-			error: "Could not extract YouTube video content. Sign into Google in a supported Chromium browser for automatic access, or set GEMINI_API_KEY.",
+			error: youTubeAccessError(options?.browserCookieConsent),
 		};
 	}
 
@@ -825,6 +832,12 @@ export async function extractContent(
 	let fetchRouting: FetchRouting;
 	try {
 		fetchRouting = loadFetchRouting();
+		if (getRetrievalOnlyPolicy().enabled) {
+			// Model providers leave the order even when listed or forced; a list of only those chose the source and is refused.
+			const providers = fetchRouting.providers.filter(provider => FETCH_PROVIDER_KINDS[provider] !== "model");
+			if (providers.length === 0) throw retrievalOnlyExhaustedError("fetch provider", fetchRouting.providers);
+			fetchRouting = { ...fetchRouting, providers };
+		}
 	} catch (err) {
 		return { url, title: "", content: "", error: errorMessage(err) };
 	}
@@ -869,10 +882,8 @@ export async function extractContent(
 	let firecrawlError: string | null = null;
 	let crawl4aiError: string | null = null;
 	let tinyfishError: string | null = null;
-	let search1apiError: string | null = null;
 	let queritError: string | null = null;
 	let tabstackError: string | null = null;
-	let specstreamError: string | null = null;
 	let kagiError: string | null = null;
 	let ollamaError: string | null = null;
 	let parallelError: string | null = null;
@@ -953,20 +964,6 @@ export async function extractContent(
 			continue;
 		}
 
-		if (provider === "search1api") {
-			try {
-				if (isSearch1APIAvailable()) {
-					const search1apiResult = await extractWithSearch1API(url, signal, options);
-					if (search1apiResult) return withDeclaredLinks(search1apiResult);
-				}
-			} catch (err) {
-				if (isAbortError(err)) return abortedResult(url);
-				search1apiError = errorMessage(err);
-				if (isConfigParseError(err)) return parseErrorResult(search1apiError);
-			}
-			continue;
-		}
-
 		if (provider === "querit") {
 			try {
 				if (isQueritAvailable()) {
@@ -991,20 +988,6 @@ export async function extractContent(
 				if (isAbortError(err)) return abortedResult(url);
 				tabstackError = errorMessage(err);
 				if (isConfigParseError(err)) return parseErrorResult(tabstackError);
-			}
-			continue;
-		}
-
-		if (provider === "specstream") {
-			try {
-				if (isSpecStreamAvailable()) {
-					const specstreamResult = await extractWithSpecStream(url, signal, options);
-					if (specstreamResult) return withDeclaredLinks(specstreamResult);
-				}
-			} catch (err) {
-				if (isAbortError(err)) return abortedResult(url);
-				specstreamError = errorMessage(err);
-				if (isConfigParseError(err)) return parseErrorResult(specstreamError);
 			}
 			continue;
 		}
@@ -1161,7 +1144,6 @@ export async function extractContent(
 		...(firecrawlError ? [`Firecrawl fallback failed: ${firecrawlError}`] : []),
 		...(crawl4aiError ? [`Crawl4AI fallback failed: ${crawl4aiError}`] : []),
 		...(tinyfishError ? [`TinyFish fallback failed: ${tinyfishError}`] : []),
-		...(search1apiError ? [`Search1API fallback failed: ${search1apiError}`] : []),
 		...(queritError ? [`Querit fallback failed: ${queritError}`] : []),
 		...(kagiError ? [`Kagi fallback failed: ${kagiError}`] : []),
 		...(ollamaError ? [`Ollama fallback failed: ${ollamaError}`] : []),
@@ -1171,14 +1153,12 @@ export async function extractContent(
 		...(deepseekError ? [`DeepSeek fallback failed: ${deepseekError}`] : []),
 		...(exaError ? [`Exa fallback failed: ${exaError}`] : []),
 		...(tabstackError ? [`Tabstack fallback failed: ${tabstackError}`] : []),
-		...(specstreamError ? [`SpecStream fallback failed: ${specstreamError}`] : []),
 		"",
 		"Fallback options:",
 		...(jinaHint ? [jinaHint] : []),
 		`  • Set firecrawlBaseUrl in ${WEB_SEARCH_CONFIG_PATH} to a self-hosted Firecrawl instance`,
 		`  • Set crawl4aiBaseUrl in ${WEB_SEARCH_CONFIG_PATH} to a self-hosted Crawl4AI instance`,
 		`  • Set tinyfishApiKey in ${WEB_SEARCH_CONFIG_PATH} or TINYFISH_API_KEY`,
-		`  • Set search1apiApiKey in ${WEB_SEARCH_CONFIG_PATH} or SEARCH1API_KEY`,
 		`  • Set queritApiKey in ${WEB_SEARCH_CONFIG_PATH} or QUERIT_API_KEY`,
 		`  • Set kagiApiKey in ${WEB_SEARCH_CONFIG_PATH} or KAGI_API_KEY`,
 		`  • Set ollamaApiKey in ${WEB_SEARCH_CONFIG_PATH} or OLLAMA_API_KEY`,
@@ -1187,9 +1167,8 @@ export async function extractContent(
 		`  • Set deepseekApiKey in ${WEB_SEARCH_CONFIG_PATH} or DEEPSEEK_API_KEY and add "deepseek" to fetchRouting.providers`,
 		`  • Set exaApiKey in ${WEB_SEARCH_CONFIG_PATH} or EXA_API_KEY and add "exa" to fetchRouting.providers`,
 		`  • Set tabstackApiKey in ${WEB_SEARCH_CONFIG_PATH} or TABSTACK_API_KEY and add "tabstack" to fetchRouting.providers`,
-		`  • Set specstreamApiKey in ${WEB_SEARCH_CONFIG_PATH} or SPECSTREAM_API_KEY and add "specstream" to fetchRouting.providers`,
-		`  • Set GEMINI_API_KEY in ${WEB_SEARCH_CONFIG_PATH}`,
-		"  • Sign into gemini.google.com in Chrome",
+		// Gemini page fetching is a model route, so it is no way forward under the retrieval-only policy.
+		...(getRetrievalOnlyPolicy().enabled ? [] : [`  • Set GEMINI_API_KEY in ${WEB_SEARCH_CONFIG_PATH}`, `  • ${browserCookieAccessHintLine()}`]),
 		...(searchToolName ? [`  • Use ${searchToolName} to find content about this topic`] : []),
 	].join("\n");
 	return { ...(finalHttpResult ?? { url, title: "", content: "", error: null }), error: guidance };
@@ -1362,7 +1341,8 @@ async function extractViaHttp(
 		const domainPolicy = loadFetchContentDomainPolicy();
 		const redirects = options?.redirects ?? loadFetchContentRedirectPolicy();
 		const authProfile = options?.authFetchProfile;
-		// Auth fetches keep Node's fetch, so browser cookies never appear in a command line.
+		// Auth fetches never run the configured curl command. With a proxy they still go through the
+		// proxy's curl transport, which passes headers (the cookie too) in a private file, not argv.
 		const curl = authProfile ? null : loadFetchContentCurl();
 		// Through curl only a configured User-Agent is sent, so curl-impersonate keeps its browser User-Agent.
 		const userAgent = curl ? loadConfiguredFetchContentUserAgent() : loadFetchContentUserAgent();

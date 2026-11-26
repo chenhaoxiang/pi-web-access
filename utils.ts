@@ -497,7 +497,7 @@ class CurlTransportError extends Error {}
 interface CurlTransport {
 	/** Executable and any leading arguments, e.g. ["curl"] or ["curl-impersonate", "--impersonate", "chrome146"]. */
 	command: readonly string[];
-	/** Proxy passed with -x, or null to connect directly. */
+	/** Proxy written to curl's -K config file (never argv), or null to connect directly. */
 	proxy: string | null;
 	/** Error message when the executable is missing; defaults to the proxy transport's message. */
 	notFound?: string;
@@ -550,6 +550,8 @@ async function fetchViaCurlOnce(url: URL, init: RequestInit, { command, proxy, n
 	const headerFile = join(dir, "headers");
 	const bodyFile = join(dir, "body");
 	const requestBodyFile = join(dir, "request-body");
+	const requestHeaderFile = join(dir, "request-headers");
+	const proxyConfigFile = join(dir, "proxy");
 
 	const args: string[] = [
 		"--silent",
@@ -560,8 +562,10 @@ async function fetchViaCurlOnce(url: URL, init: RequestInit, { command, proxy, n
 		// URLs are validated as written, so curl must send [ ] { } literally instead of expanding them into other URLs.
 		"--globoff",
 		"--connect-timeout", "20",
-		// An empty proxy also stops curl from using proxy environment variables, which Node's fetch ignores.
-		"-x", proxy ?? "",
+		// The proxy URL can hold a password, so it goes through a config file in the private dir, never argv,
+		// which other processes can read. An empty proxy also stops curl from using proxy environment variables,
+		// which Node's fetch ignores.
+		"-K", proxyConfigFile,
 		// The caller already chose the proxy; curl must not send a host direct because of its own NO_PROXY reading.
 		...(proxy ? ["--noproxy", ""] : []),
 		"-D", headerFile,
@@ -573,32 +577,40 @@ async function fetchViaCurlOnce(url: URL, init: RequestInit, { command, proxy, n
 	else if (method !== "GET") args.push("-X", method);
 	if (maxBytes !== undefined) args.push("--max-filesize", String(maxBytes));
 
+	// Header values (cookies, API keys) go through a file in the private dir, never argv, which other processes can read.
+	const headerLines: string[] = [];
 	for (const [name, value] of headers.entries()) {
 		if (value === "") continue;
-		args.push("-H", `${name}: ${value}`);
+		headerLines.push(`${name}: ${value}`);
 	}
 
 	const body = init.body;
+	let requestBody: Buffer | undefined;
 	if (body !== undefined && body !== null) {
-		let buffer: Buffer;
-		if (typeof body === "string") buffer = Buffer.from(body, "utf-8");
-		else if (body instanceof URLSearchParams) buffer = Buffer.from(body.toString(), "utf-8");
-		else if (body instanceof ArrayBuffer) buffer = Buffer.from(body);
-		else if (ArrayBuffer.isView(body)) buffer = Buffer.from(body.buffer, body.byteOffset, body.byteLength);
+		if (typeof body === "string") requestBody = Buffer.from(body, "utf-8");
+		else if (body instanceof URLSearchParams) requestBody = Buffer.from(body.toString(), "utf-8");
+		else if (body instanceof ArrayBuffer) requestBody = Buffer.from(body);
+		else if (ArrayBuffer.isView(body)) requestBody = Buffer.from(body.buffer, body.byteOffset, body.byteLength);
 		else throw new Error(`Unsupported request body type for proxy fetch: ${typeof body}`);
-		await writeFile(requestBodyFile, buffer);
 		args.push("--data-binary", `@${requestBodyFile}`);
 		if (method === "GET") args.unshift("-X", "GET");
 	} else if ((method === "POST" || method === "PUT") && !headers.has("content-length")) {
 		// Native fetch sends a zero length for a bodyless POST/PUT; some origins answer 411 without it.
-		args.push("-H", "Content-Length: 0");
+		headerLines.push("Content-Length: 0");
 	}
+	if (headerLines.length > 0) args.push("-H", `@${requestHeaderFile}`);
 
 	args.push(url.toString());
 
 	const signal = init.signal ?? null;
 	let stdout: string;
 	try {
+		// Written inside the try so a failed or partial write still removes the dir and any secrets in it.
+		if (requestBody) await writeFile(requestBodyFile, requestBody, { mode: 0o600 });
+		// Escaping newlines keeps a malformed proxy value from adding other curl options to the file.
+		const quotedProxy = (proxy ?? "").replace(/[\\"]/g, "\\$&").replace(/\n/g, "\\n").replace(/\r/g, "\\r");
+		await writeFile(proxyConfigFile, `proxy = "${quotedProxy}"\n`, { mode: 0o600 });
+		if (headerLines.length > 0) await writeFile(requestHeaderFile, `${headerLines.join("\n")}\n`, { mode: 0o600 });
 		stdout = await new Promise<string>((resolve, reject) => {
 			if (signal?.aborted) {
 				reject(new DOMException("The operation was aborted.", "AbortError"));

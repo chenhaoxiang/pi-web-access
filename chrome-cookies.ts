@@ -69,6 +69,7 @@ const ALL_COOKIE_NAMES = new Set([
 
 const MACOS_BROWSER_CONFIGS: BrowserConfig[] = [
 	{ id: "helium", name: "Helium", baseDir: "Library/Application Support/net.imput.helium", keychainService: "Helium Storage Key", keychainAccount: "Helium" },
+	{ id: "ardia", name: "Ardia", baseDir: "Library/Application Support/com.ardia.browser/Chromium", keychainService: "Ardia Safe Storage", keychainAccount: "Ardia" },
 	{ id: "chrome", name: "Chrome", baseDir: "Library/Application Support/Google/Chrome", keychainService: "Chrome Safe Storage", keychainAccount: "Chrome" },
 	{ id: "brave", name: "Brave", baseDir: "Library/Application Support/BraveSoftware/Brave-Browser", keychainService: "Brave Safe Storage", keychainAccount: "Brave" },
 	{ id: "arc", name: "Arc", baseDir: "Library/Application Support/Arc/User Data", keychainService: "Arc Safe Storage", keychainAccount: "Arc" },
@@ -126,7 +127,7 @@ export async function getBrowserCookiesForHosts(
 	}
 
 	const currentPlatform = process.platform;
-	const platformConfigs = currentPlatform === "darwin" ? MACOS_BROWSER_CONFIGS : currentPlatform === "linux" ? LINUX_BROWSER_CONFIGS : currentPlatform === "win32" ? WINDOWS_BROWSER_CONFIGS : [];
+	const platformConfigs = browserConfigsFor(currentPlatform);
 	const configs = options.browser ? platformConfigs.filter((config) => config.id === options.browser) : platformConfigs;
 	if (options.browser && configs.length === 0) {
 		setCookieDiagnostic(`Browser preset '${options.browser}' is not supported on this platform.`);
@@ -152,7 +153,7 @@ export async function getBrowserCookiesForHosts(
 		return null;
 	}
 	const attempts: BrowserCookieAttemptDiagnostic[] = [];
-	const home = currentPlatform === "win32" ? process.env.USERPROFILE || homedir() : homedir();
+	const home = browserHome(currentPlatform);
 	let sawCookieDatabase = false;
 	let sawRequiredCookies = false;
 	let sawAnyHostCookie = false;
@@ -327,6 +328,31 @@ export async function getBrowserCookiesForHosts(
 function setCookieDiagnostic(message: string, attempts: BrowserCookieAttemptDiagnostic[] = []): void {
 	lastCookieDiagnostic = message;
 	lastCookieDiagnosticDetails = { message, attempts };
+}
+
+function browserConfigsFor(currentPlatform: typeof process.platform): BrowserConfig[] {
+	return currentPlatform === "darwin" ? MACOS_BROWSER_CONFIGS : currentPlatform === "linux" ? LINUX_BROWSER_CONFIGS : currentPlatform === "win32" ? WINDOWS_BROWSER_CONFIGS : [];
+}
+
+function browserHome(currentPlatform: typeof process.platform): string {
+	return currentPlatform === "win32" ? process.env.USERPROFILE || homedir() : homedir();
+}
+
+export interface DetectedBrowser {
+	browser: BrowserCookiePreset;
+	name: string;
+	profiles: string[];
+}
+
+/** Browsers with a cookie database on this machine, for asking the user before any cookie is read.
+ * It only checks that profile folders and cookie files exist: no keychain, decryption, or file contents. */
+export function detectBrowserProfiles(): DetectedBrowser[] {
+	const home = browserHome(process.platform);
+	return browserConfigsFor(process.platform).flatMap((config) => {
+		const basePath = browserBasePath(home, config);
+		const profiles = listBrowserProfiles(home, config).filter((profile) => cookieDatabasePath(join(basePath, profile), config));
+		return profiles.length > 0 ? [{ browser: config.id, name: config.name, profiles }] : [];
+	});
 }
 
 function recordCookieAttempt(attempts: BrowserCookieAttemptDiagnostic[], config: BrowserConfig, profile: string, status: BrowserCookieAttemptStatus): void {

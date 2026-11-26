@@ -4,10 +4,11 @@ import { readFile } from "node:fs/promises";
 import { resolve, extname, basename, join, dirname } from "node:path";
 import { activityMonitor } from "./activity.ts";
 import { canAttachImages } from "./feature-config.ts";
-import { isGeminiWebAvailable, queryWithCookies } from "./gemini-web.ts";
+import { isGeminiWebAvailable, queryWithCookies, requestBrowserCookieAccess } from "./gemini-web.ts";
 import { queryGeminiApiWithVideo, getApiKey, fetchGeminiApi, getVersionedApiBase, getUploadBase, redactGeminiApiResponse, rewriteUploadUrlOrigin } from "./gemini-api.ts";
 import { extractHeadingTitle, type ExtractedContent, type ExtractOptions, type FrameResult } from "./extract.ts";
 import { readExecError, trimErrorText, mapFfmpegError, getWebSearchConfigPath, FRAME_SCALE_FILTER } from "./utils.ts";
+import { getRetrievalOnlyPolicy, retrievalOnlyError } from "./retrieval-only.ts";
 
 const CONFIG_PATH = getWebSearchConfigPath();
 
@@ -166,6 +167,7 @@ export async function extractVideo(
 	signal?: AbortSignal,
 	options?: ExtractOptions,
 ): Promise<ExtractedContent | null> {
+	if (getRetrievalOnlyPolicy().enabled) throw retrievalOnlyError("Local video analysis");
 	const config = loadVideoConfig();
 	const effectivePrompt = options?.prompt ?? DEFAULT_VIDEO_PROMPT;
 	const effectiveModel = options?.model ?? config.preferredModel;
@@ -179,7 +181,8 @@ export async function extractVideo(
 	const activityId = activityMonitor.logStart({ type: "fetch", url: `video:${displayName}` });
 
 	const result = await tryVideoGeminiApi(info, effectivePrompt, effectiveModel, signal)
-		?? await tryVideoGeminiWeb(info, effectivePrompt, effectiveModel, signal);
+		?? await tryVideoGeminiWeb(info, effectivePrompt, effectiveModel, signal)
+		?? (await requestBrowserCookieAccess(options?.browserCookieConsent, signal) ? await tryVideoGeminiWeb(info, effectivePrompt, effectiveModel, signal) : null);
 
 	if (result) {
 		if (canAttachImages()) {
